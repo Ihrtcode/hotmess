@@ -1,0 +1,551 @@
+---
+title: "Katie - Hobo data"
+output: html_notebook
+---
+
+Set up **environment** 
+
+```{r, echo=TRUE, results='hide'}
+#### Clear  environment 
+rm(list = ls())         
+
+#### Required packages
+library(tidyverse)        # for data organization and manipulation 
+library(lubridate)        # for manipulating time variables
+library(purrr) # for joining column onto list of dataframes
+library(dplyr)
+```
+
+Load the raw data all into one big file but make sure that 
+
+- we only read the important parts (skip = 20, skips the first 20 rows of the raw hobo data)
+- save the file names as we need these to link to treatments and sites (.id = "hobo_name" stores the original file names as a new variable)
+
+```{r}
+# Get the list of CSV files in the "raw_data" folder
+csv_files <- list.files("raw-hobo-data", pattern = "\\.csv$", full.names = TRUE)
+
+# Create an empty list to store the data frames
+data_frames_list <- list()
+
+# Loop through each CSV file
+for (csv_file in csv_files) {
+  # Read the CSV file into a data frame, excluding the first 20 rows
+  df_name <- tools::file_path_sans_ext(basename(csv_file))  # Extract the file name without extension
+  data_frames_list[[df_name]] <- read.csv(csv_file, skip = 20)
+}
+
+# Combine all into one, 
+hobo_data <- bind_rows(data_frames_list, .id = "hobo_name")
+
+# bind additonal file with pad number and csv name 
+
+str(hobo_data)
+
+
+```
+
+Next we need to change the time variable to date format 
+
+```{r}
+# Convert the "time" variable to a date-time object
+hobo_data$time <- ymd_hms(hobo_data$time)
+
+str(hobo_data)
+
+```
+
+
+```{r}
+# Combine pad ID names with existing dataframe 
+#hobo_data <- bind_rows(data_frames_list, .id = "hobo_name")
+
+# bind additional file with pad number and csv name 
+Logger_ID_List <- read.csv("Logger_ID_List.csv")
+# why does this need ot be .csv
+
+# remove last 2 digits from hobo_names as I made mistake when creating Logger_ID_List.csv 
+hobo_data$hobo.names.less2 <- substr(hobo_data$hobo_name, 1, nchar(hobo_data$hobo_name) - 2)
+
+
+# Perform left join on each dataframe in the list
+hobo_data <- left_join(hobo_data, Logger_ID_List, by = "hobo.names.less2")
+
+
+hobo_data <- hobo_data %>% 
+  dplyr::select(c(hobo_name, time, temp, Plate_ID)) %>%
+  rename(plate_id = Plate_ID)
+
+
+
+#We don't need all of the data, right? Can pick a date range here.
+
+#check 
+length(unique(hobo_data$plate_id))
+
+
+
+
+```
+
+```{r}
+
+# Set the sampling date
+JUN_1_date <- ymd_hms("2023-06-20 06:00:00") 
+
+
+# Subset the data using filter
+JUN_1 <- hobo_data %>%
+  
+  #select 2 weeks before sampling date
+  filter(time >= JUN_1_date - days(14) & time < JUN_1_date) %>%
+  
+  # filter for daytime hours 8am - 8pm
+  filter(hour(time) >= 6, hour(time) < 20) %>% 
+  
+  group_by(plate_id) %>%
+  summarise(mean_temp = mean(temp), 
+            max_temp = max(temp),
+            sd_temp = sd(temp)
+            
+            )
+
+hist(JUN_1$mean_temp, breaks = 20)
+
+
+# order dataframe
+my_order <- c(10,21,7,20,5,17,6,19,2,12,13,11,3,15,8,1,9,23,4,18)
+
+# Reorder the DataFrame
+JUN_1_reordered <- JUN_1[match(my_order, JUN_1$plate_id), ]
+
+# Check the reordered DataFrame
+print(JUN_1_reordered)
+
+```
+
+```{r}
+
+# Set the sampling date
+JUL_1_date <- ymd_hms("2023-07-06 06:00:00") 
+
+
+# Subset the data using filter
+JUL_1 <- hobo_data %>%
+  
+  #select 2 weeks before sampling date
+  filter(time >= JUL_1_date - days(14) & time < JUL_1_date) %>%
+  
+  # filter for daytime hours 8am - 8pm
+  filter(hour(time) >= 6, hour(time) < 20) %>% 
+  
+  group_by(plate_id) %>%
+  summarise(mean_temp = mean(temp), 
+            max_temp = max(temp),
+            sd_temp = sd(temp)
+            
+            )
+
+hist(JUL_1$mean_temp, breaks = 20)
+
+JUL_1
+
+JUL_1_reordered <- JUN_1[match(my_order, JUL_1$plate_id), ]
+
+# Check the reordered DataFrame
+print(JUL_1_reordered)
+```
+
+
+```{r}
+
+# Set the sampling date
+JUL_2_date <- ymd_hms("2023-07-20 06:00:00") 
+
+
+# Subset the data using filter
+JUL_2 <- hobo_data %>%
+  
+  #select 2 weeks before sampling date
+  filter(time >= JUL_2_date - days(14) & time < JUL_2_date) %>%
+  
+  # filter for daytime hours 8am - 8pm
+  filter(hour(time) >= 6, hour(time) < 20) %>% 
+  
+  group_by(plate_id) %>%
+  summarise(mean_temp = mean(temp), 
+            max_temp = max(temp),
+            sd_temp = sd(temp)
+            
+            )
+
+hist(JUL_2$mean_temp, breaks = 20)
+
+
+JUL_2_reordered <- JUL_2[match(my_order, JUL_2$plate_id), ]
+
+# Check the reordered DataFrame
+print(JUL_2_reordered)
+```
+
+```{r}
+
+# Set the sampling date
+AUG_1_date <- ymd_hms("2023-08-01 06:00:00") 
+
+
+# Subset the data using filter
+AUG_1 <- hobo_data %>%
+  
+  #select 2 weeks before sampling date
+  filter(time >= AUG_1_date - days(14) & time < AUG_1_date) %>%
+  
+  # filter for daytime hours 8am - 8pm
+  filter(hour(time) >= 6, hour(time) < 20) %>% 
+  
+  group_by(plate_id) %>%
+  summarise(mean_temp = mean(temp), 
+            max_temp = max(temp),
+            sd_temp = sd(temp)
+            
+            )
+
+hist(AUG_1$mean_temp, breaks = 20)
+
+
+AUG_1_reordered <- AUG_1[match(my_order, AUG_1$plate_id), ]
+
+# Check the reordered DataFrame
+print(AUG_1_reordered)
+```
+
+
+```{r}
+
+# Set the sampling date
+AUG_2_date <- ymd_hms("2023-08-17 06:00:00") 
+
+
+# Subset the data using filter
+AUG_2 <- hobo_data %>%
+  
+  #select 2 weeks before sampling date
+  filter(time >= AUG_2_date - days(14) & time < AUG_2_date) %>%
+  
+  # filter for daytime hours 8am - 8pm
+  filter(hour(time) >= 6, hour(time) < 20) %>% 
+  
+  group_by(plate_id) %>%
+  summarise(mean_temp = mean(temp), 
+            max_temp = max(temp),
+            sd_temp = sd(temp)
+            
+            )
+
+hist(AUG_2$mean_temp, breaks = 20)
+
+
+AUG_2_reordered <- JUN_1[match(my_order, AUG_2$plate_id), ]
+
+# Check the reordered DataFrame
+print(AUG_2_reordered)
+```
+
+
+
+
+```{r}
+
+# Set the sampling date
+SEP_1_date <- ymd_hms("2023-09-01 06:00:00") 
+
+
+# Subset the data using filter
+SEP_1 <- hobo_data %>%
+  
+  #select 2 weeks before sampling date
+  filter(time >= SEP_1_date - days(14) & time < SEP_1_date) %>%
+  
+  # filter for daytime hours 8am - 8pm
+  filter(hour(time) >= 6, hour(time) < 20) %>% 
+  
+  group_by(plate_id) %>%
+  summarise(mean_temp = mean(temp), 
+            max_temp = max(temp),
+            sd_temp = sd(temp)
+            
+            )
+
+hist(SEP_1$mean_temp, breaks = 20)
+
+
+SEP_1_reordered <- SEP_1[match(my_order, SEP_1$plate_id), ]
+
+# Check the reordered DataFrame
+print(SEP_1_reordered)
+```
+
+
+```{r}
+
+# Set the sampling date
+SEP_2_date <- ymd_hms("2023-09-15 06:00:00") 
+
+
+# Subset the data using filter
+SEP_2 <- hobo_data %>%
+  
+  #select 2 weeks before sampling date
+  filter(time >= SEP_1_date - days(14) & time < SEP_1_date) %>%
+  
+  # filter for daytime hours 8am - 8pm
+  filter(hour(time) >= 6, hour(time) < 20) %>% 
+  
+  group_by(plate_id) %>%
+  summarise(mean_temp = mean(temp), 
+            max_temp = max(temp),
+            sd_temp = sd(temp)
+            
+            )
+
+hist(SEP_2$mean_temp, breaks = 20)
+
+SEP_2_reordered <- SEP_2[match(my_order, SEP_2$plate_id), ]
+
+# Check the reordered DataFrame
+print(SEP_2_reordered)
+```
+```{r}
+# Assuming hobo_data is your dataset and you've already done the previous steps
+
+# Define the pad ID numbers for each group
+control_logs <- c('10','7','5','6','2','12','11','3','8','1','9','4') 
+warm_logs <- c('21','20', '17','19','13','15','23','18') # Replace with actual plate_id values for Group 2
+
+# Categorize each row based on its plate_id
+
+hobo_data <- hobo_data %>%
+  mutate(group = case_when(
+    plate_id %in% warm_logs ~ 'Warm Pads',
+    plate_id %in% control_logs ~ 'Control Pads'
+  ))
+
+# hobo_data will have a new column 'group' categorizing each row
+
+
+
+```
+### this chunk needs help
+```{r}
+
+
+hobo_data$date <- as.Date(hobo_data$time)
+
+hobo_data$Time <- round_date(hobo_data$time, "hour")
+
+
+# Calculating the mean for each group at each date
+average_hobo_data <- hobo_data %>%
+  group_by(Time, group) %>%
+  summarize(mean_temp = mean(temp, na.rm = TRUE), .groups = 'drop')
+
+# Calculating the max for each group at each date
+max_hobo_data <- hobo_data %>%
+  group_by(Time, group) %>%
+  summarize(max_temp = max(temp, na.rm = TRUE), .groups = 'drop')
+
+
+average_hobo_data$Time <- as.POSIXct(average_hobo_data$Time, format="%Y-%m-%d %H:%M:%S")
+
+max_hobo_data$Time  <- as.POSIXct(max_hobo_data$Time, format="%Y-%m-%d %H:%M:%S")
+
+#sort out averages
+
+#tide$date <- as.Date(tide$date)
+```
+
+```{r}
+# Load the data
+tide <- read.table("Brighton_tide_heights.txt", header = TRUE, sep = "", skip = 11)
+
+
+names(tide) <- c('Row', 'Date', 'Time', 'Height', 'Residual')
+
+tide <- tide %>%
+  mutate(DateTime = as.POSIXct(paste(Date, Time), format = "%Y/%m/%d %H:%M:%S"))
+
+# Now filter for a specific date range, for example, March 1, 2023, to March 31, 2023
+filtered_tide <- tide %>%
+  filter(DateTime >= as.POSIXct("2023-06-20") & DateTime <= as.POSIXct("2023-09-15"))
+
+
+# Filter out rows where Height is not finite
+filtered_tide_clean <- filtered_tide %>% 
+  filter(is.finite(Height))
+
+
+# Convert Time to POSIXct in average_hobo_data
+hobo_data$Time <- as.POSIXct(hobo_data$Time, format = "%Y-%m-%d %H:%M:%S")
+# Convert Time to POSIXct in filtered_tide
+filtered_tide$Time <- as.POSIXct(filtered_tide$DateTime, format = "%Y-%m-%d %H:%M:%S")
+
+
+
+filtered_tide$Height <- gsub("M", "", filtered_tide$Height)  # Remove 'M' from the Height values
+
+# Convert Height to numeric
+filtered_tide$Height <- as.numeric(filtered_tide$Height)
+
+# Check for any Inf, -Inf, or NaN values in the Height column
+sum(!is.finite(filtered_tide$Height))
+
+# Check for any conversion warnings or errors
+ggplot() +
+  geom_line(data = filtered_tide, aes(x = Time, y = Height), colour = "lightblue")
+
+
+
+```
+
+
+
+```{r}
+# Assuming max_hobo_data exists and is correct
+ggplot() +
+  geom_point(data = max_hobo_data %>% filter(group == "Warm Pads"), aes(x = Time, y = max_temp, color = "Warm Pads")) +
+  geom_point(data = max_hobo_data %>% filter(group == "Control Pads"), aes(x = Time, y = max_temp, color = "Control Pads")) +
+  scale_color_manual(values = c("Warm Pads" = "red", "Control Pads" = "blue")) +
+  geom_line(data = max_hobo_data, aes(x = Time, y = max_temp, group = group, color = group)) +
+  labs(title = "Temperature Trends",
+       x = "Date",
+       y = "Max Temperature",
+       color = "Group") +
+  theme_minimal() +
+  scale_x_datetime(date_breaks = "1 day", date_labels = "%b %d", limits = as.POSIXct(c("2023-08-19", "2023-08-23")))
+
+# Note: Corrected the date in the upper limit from "2023-08-123" to "2023-08-23"
+
+
+```
+
+
+
+```{r}
+ggplot() +
+  geom_point(data = average_hobo_data %>% filter(group == "Warm Pads"), aes(x = Time, y = mean_temp, color = group)) +
+  geom_line(data = average_hobo_data %>% filter(group == "Warm Pads"), aes(x = Time, y = mean_temp, group = group), color = "red") +
+  geom_point(data = average_hobo_data %>% filter(group == "Control Pads"), aes(x = Time, y = mean_temp, color = group)) +
+  geom_line(data = average_hobo_data %>% filter(group == "Control Pads"), aes(x = Time, y = mean_temp, group = group), color = "blue") +
+  scale_color_manual(values = c("Warm Pads" = "red", "Control Pads" = "blue")) +
+  labs(title = "Temperature Trends", x = "Date", y = "Temperature", color = "Group") +
+  theme_minimal() +
+  scale_x_datetime(limits = as.POSIXct(c("2023-08-20 00:00:00", "2023-08-25 00:00:00")))+
+  ylim(10,35)
+
+#what does this waerning mean!?
+#make sure low tide isn't at night!
+#can chekc this against tidal data
+
+```
+```{r}
+#temperature doesn't match up with average_hobo_data
+
+
+
+tide_plot <- ggplot() +
+  geom_point(data = average_hobo_data %>% filter(group == "Warm Pads"), aes(x = Time, y = mean_temp, color = group)) +
+  geom_line(data = average_hobo_data %>% filter(group == "Warm Pads"), aes(x = Time, y = mean_temp), color = "red") +
+  geom_point(data = average_hobo_data %>% filter(group == "Control Pads"), aes(x = Time, y = mean_temp, color = group)) +
+  geom_line(data = average_hobo_data %>% filter(group == "Control Pads"), aes(x = Time, y = mean_temp), color = "blue") +
+  geom_area(data = filtered_tide, aes(x = Time, y = Height, fill = "Tide"), colour = "lightblue", alpha = 0.5) + # Fill under the tide line
+ # geom_ribbon(data = hobo_se, aes(x = Time, ymin = Lower, ymax = Upper, fill = group), alpha = 0.2) +
+  scale_fill_manual(values = c("Warm Pads" = "red", "Control Pads" = "blue", "Tide" = "lightblue")) +
+  scale_color_manual(values = c("Warm Pads" = "red", "Control Pads" = "blue")) +
+  scale_y_continuous("Temperature Scale",
+                     sec.axis = sec_axis(~ . * max(filtered_tide$Height) / max(hobo_data$temp), name = "Tide Height Scale")) +
+  labs(x = "Date") +
+   scale_x_datetime(date_labels = "%Y-%m-%d %H:%M", date_breaks = "1 day", limits = as.POSIXct(c("2023-08-07 10:00:00", "2023-08-09 10:00:00")))+
+  theme_minimal()
+
+tide_plot
+
+```
+
+
+```{r}
+
+hobo_se <- hobo_data %>%
+  group_by(Time, group) %>%
+  summarise(
+    Avg = mean(temp),
+    SE = sd(temp) / sqrt(n()),
+    Lower = Avg - SE,  # Assuming 1 SE for the demonstration
+    Upper = Avg + SE
+  ) %>%
+  ungroup()
+
+
+#try with straigth hobot data
+
+tide_plot_2 <- ggplot() +
+  geom_point(data = hobo_data %>% filter(group == "Warm Pads"), aes(x = Time, y = temp, color = group), size = 1, alpha = 0.2) +
+  geom_line(data = hobo_data %>% filter(group == "Warm Pads"), aes(x = Time, y = temp, group = group),  color = "red", alpha = 0.8) +
+  geom_point(data = hobo_data %>% filter(group == "Control Pads"), aes(x = Time, y = temp, color = group), size = 1, alpha = 0.1) +
+  geom_line(data = hobo_data %>% filter(group == "Control Pads"), aes(x = Time, y = temp, group = group), color = "blue", alpha = 0.8) +
+  scale_color_manual(values = c("Warm Pads" = "red", "Control Pads" = "blue")) +
+geom_area(data = filtered_tide, aes(x = Time, y = Height, fill = "Tide"), colour = "lightblue", alpha = 0.5) + # Fill under the tide line
+  scale_fill_manual(values = c("Tide" = "lightblue"))+
+  scale_y_continuous("Temperature Scale",
+                     sec.axis = sec_axis(~ . * max(filtered_tide$Height) / max(hobo_data$temp), name = "Tide Height Scale")) +
+  labs(x = "Date") +
+   scale_x_datetime(date_labels = "%Y-%m-%d %H:%M", date_breaks = "1 day", limits = as.POSIXct(c("2023-09-07 00:00:00", "2023-09-09 00:00:00")))+
+  theme_minimal()+
+   geom_ribbon(data = hobo_se, aes(x = Time, ymin = Lower, ymax = Upper, group = group, fill = group), alpha = 0.2)+
+  scale_color_manual(values = c("Warm Pads" = "red", "Control Pads" = "blue")) # Add this line for shaded areas
+
+tide_plot_2
+
+```
+
+
+```{r}
+
+tide_plot_3 <- ggplot() +
+  geom_point(data = hobo_data %>% filter(group == "Warm Pads"), aes(x = Time, y = temp, color = group), size = 1, alpha = 0.4) +
+  #geom_line(data = hobo_data %>% filter(group == "Warm Pads"), aes(x = Time, y = temp, group = group), color = "red", alpha = 0.8) +
+  geom_point(data = hobo_data %>% filter(group == "Control Pads"), aes(x = Time, y = temp, color = group), size = 1, alpha = 0.4) +
+  #geom_line(data = hobo_data %>% filter(group == "Control Pads"), aes(x = Time, y = temp, group = group), color = "blue", alpha = 0.8) +
+  geom_area(data = filtered_tide, aes(x = Time, y = Height, fill = "Tide"), color = "lightblue", alpha = 0.5) +
+  geom_ribbon(data = hobo_se, aes(x = Time, ymin = Lower, ymax = Upper, fill = group), alpha = 0.4) +
+  scale_fill_manual(values = c("Warm Pads" = "red", "Control Pads" = "blue", "Tide" = "lightblue")) +
+  scale_color_manual(values = c("Warm Pads" = "red", "Control Pads" = "blue")) +
+  labs(x = "Date", y = "Temperature Scale", title = "Temperature and Tide Trends") +
+  scale_x_datetime(date_labels = "%Y-%m-%d %H:%M", date_breaks = "1 day", limits = as.POSIXct(c("2023-09-07 00:00:00", "2023-09-09 00:00:00"))) +
+  theme_minimal()
+
+
+
+
+tide_plot_3
+
+
+#ggsave("tide_plot.pdf", tide_plot, width = 11, height = 8)
+
+#why is there no difference between the temp treatments?
+
+```
+
+
+```{r}
+#add air
+ # geom_line(data = brighton_temp, aes(x = date, y = temp), color = "gray", linetype = "dashed") +
+```
+
+
+Important next step is to match up the hobo file names with the site information 
+
+
+Then we can get summary data (like average temperature over a 2 week period?)
+
+
+Then we can merge the summary data with the main dataframe 

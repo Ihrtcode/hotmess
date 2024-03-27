@@ -1,0 +1,856 @@
+---
+title: "Models"
+output: html_document
+date: "2024-02-05"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+# running in R version 4.3.1
+
+#### Clear  environment 
+rm(list = ls())         
+
+#### Required packages
+library(tidyverse) # for general organisation
+
+library(MASS) # for glm.nb
+library(pscl) # for odtest for dispersion
+
+library(lme4) # For linear mixed-effects models (if needed)
+library(lmerTest) # for mixed effect as lme4 doesn't give p values
+
+library(ncdf4) #for .nc data
+library(raster)
+
+
+#library(ncdf4)
+#library(raster)
+
+#install.packages("AER")
+library(AER) #for dispersion test for possion GLM
+
+library(forecast) # for ARIMA time series
+
+library(zoo) #create irregular time point series
+#install.packages("car")
+library(car)
+
+library(dplyr)
+library(tidyr)
+
+library(broom) # For tidy model summaries
+
+```
+
+Next, we will load the data (**if this R notebook is in the same directory (i.e., folder) as the data, then you can just call the file name directly**)
+
+```{r}
+# load the data 
+brighton <- read.csv("Hotmess_R.csv")
+
+```
+
+We need to make sure that the data are in the correct formates. For example, any data variables need to be properly assigned and we may want to change variables from characters to numeric etc., 
+
+```{r}
+str(brighton)
+```
+
+It looks like the variable `Sampling_Date` needs to be changed to "date".
+`Pad_Region` and `Pad_Colour` should also be converted to factors as these are our key explanatory variables. 
+
+```{r}
+brighton$Sampling_Date <- as.Date(brighton$Sampling_Date, format = "%d/%m/%Y")
+
+brighton$Pad_Region <- as.factor(brighton$Pad_Region)
+
+brighton$Pad_Colour <- as.factor(brighton$Pad_Colour)
+
+brighton$total_grazer <- brighton$Gastropod_Count_ON + brighton$Gastropod_Count_SIDE
+
+str(brighton)
+```
+
+
+
+```{r}
+#models for whole time series 
+
+#linear mixed effect model
+
+mm1<- lmer(Barnacle_Count ~ Pad_Colour*Pad_Region + (1 | Pad_ID), data = brighton)
+
+summary(mm1)
+# estimate sd shows how many more in each treatment e.g. pad_colour W is 24.7 more barnacles on white pads
+
+```
+
+
+```{r}
+log_BC <-log(brighton$Barnacle_Count)
+
+hist(log_BC)
+```
+
+```{r}
+#generalised linear model 
+#not approcpriate as ads are independant as sampled at each date 
+# do for each time point separately to account for this
+
+glm_1 <- glmer(Barnacle_Count ~ Pad_Colour * Pad_Region + (1 | Pad_ID), data = brighton, family = poisson)
+
+#check for dispersion of count data in poisson glm
+#dispersiontest(glm_1)
+# overdispersed 
+
+summary(glm_1)
+Anova(glm_1)
+
+
+#another method to check whether negative binomial or poisson distribution is more appropriate
+glm_2 <- glm.nb(Barnacle_Count ~ Pad_Colour * Pad_Region + (1 | Pad_ID), data = brighton)
+
+odTest(glm_2)
+#poisson rejected in favor of negative binomial
+#BUT still over dispersed
+
+summary(glm_2)
+#results 
+#why are all results other than interaction 2e-16 
+#pad colour (W) x pad region (p) 6.29e-09 
+#how to change this from W --> B pad colour
+```
+
+### Individual sampling date linear mixed model for barnacle COUNT + SIZE
+
+```{r}
+# subset data for JUN 1
+
+  #use argument family = poisson for count
+  #use argument family = gaussian for normal distributed data
+
+sub_JUN_1 <- brighton %>%
+  filter(Sampling_Date >= as.Date('2023-06-20'))
+
+head(sub_JUN_1)
+
+
+#barnacle count
+
+glm_JUN_1<- glm(Barnacle_Count ~ Pad_Colour*Pad_Region, data = sub_JUN_1, family = poisson())
+
+dispersiontest(glm_JUN_1)
+
+glm.nb_JUN_1<- glm.nb(Barnacle_Count ~ Pad_Colour*Pad_Region, data = sub_JUN_1)
+
+odTest(glm.nb_JUN_1)
+
+#doing glm for count data with poisson or negative binoial (if overdispersed)
+#negative binomial
+
+summary(glm.nb_JUN_1)
+
+
+```
+
+```{r}
+# barnacle size
+
+glm_JUN_1<- glm(AVG_Banacle_Size ~ Pad_Colour*Pad_Region, data = sub_JUN_1)
+
+summary(glm_JUN_1)
+
+```
+```{r}
+GAS_glm_JUN_1<- glm(total_grazer ~ Pad_Colour*Pad_Region, data = sub_JUN_1)
+
+#not normal distribution
+plot(GAS_glm_JUN_1)
+
+
+anova(GAS_glm_JUN_1)
+summary(GAS_glm_JUN_1)
+#only effect of pollution not colour as they are motile so warming treatment has less effect
+
+```
+
+
+```{r}
+# subset data for JUL 1
+
+sub_JUL_1 <- brighton %>%
+  filter(Sampling_Date >= as.Date('2023-07-06'))
+
+head(sub_JUL_1)
+
+
+# barnacle count
+
+glm_JUL_1<- glm(Barnacle_Count ~ Pad_Colour*Pad_Region, data = sub_JUL_1, family = poisson)
+
+dispersiontest(glm_JUL_1)
+
+glm.nb_JUL_1<- glm.nb(Barnacle_Count ~ Pad_Colour*Pad_Region, data = sub_JUL_1)
+
+odTest(glm.nb_JUL_1)
+
+#doing glm for count data with poisson or negative binoial (if overdispersed)
+#negative binomial
+
+summary(glm.nb_JUL_1)
+
+```
+
+```{r}
+# barnacle size
+
+glm_JUL_1<- glm(AVG_Banacle_Size ~ Pad_Colour*Pad_Region, data = sub_JUL_1)
+
+summary(glm_JUL_1)
+anova(glm_JUL_1)
+```
+
+```{r}
+
+# subset data for JUL 2
+
+sub_JUL_2 <- brighton %>%
+  filter(Sampling_Date >= as.Date('2023-07-20'))
+
+                              
+head(sub_JUL_2)
+
+glm_JUL_2<- glm(Barnacle_Count ~ Pad_Colour*Pad_Region, data = sub_JUL_2, family = poisson)
+
+dispersiontest(glm_JUL_2)
+
+glm.nb_JUL_2<- glm.nb(Barnacle_Count ~ Pad_Colour*Pad_Region, data = sub_JUL_2)
+
+odTest(glm.nb_JUL_2)
+
+#doing glm for count data with poisson or negative binoial (if overdispersed)
+#negative binomial
+
+summary(glm.nb_JUL_2)
+
+```
+
+```{r}
+
+# barncale size
+
+lm_JUL_2<- lm(AVG_Banacle_Size ~ Pad_Colour*Pad_Region, data = sub_JUL_2)
+
+summary(lm_JUL_2)
+
+
+```
+
+```{r}
+
+# subset data for AUG 1
+
+sub_AUG_1 <- brighton %>%
+  filter(Sampling_Date >= as.Date('2023-08-01'))
+
+head(sub_AUG_1)
+
+
+# barnacle count
+
+
+glm_AUG_1<- glm(Barnacle_Count ~ Pad_Colour*Pad_Region, data = sub_AUG_1, family = poisson)
+
+dispersiontest(glm_AUG_1)
+
+glm.nb_AUG_1<- glm.nb(Barnacle_Count ~ Pad_Colour*Pad_Region, data = sub_AUG_1)
+
+odTest(glm.nb_AUG_1)
+
+#doing glm for count data with poisson or negative binoial (if overdispersed)
+#negative binomial
+
+summary(glm.nb_AUG_1)
+
+```
+
+```{r}
+
+# barnacle size
+
+lm_AUG_1<- lm(AVG_Banacle_Size ~ Pad_Colour*Pad_Region, data = sub_AUG_1)
+
+summary(lm_AUG_1)
+
+
+```
+
+```{r}
+# subset data for AUG 2
+
+sub_AUG_2 <- brighton %>%
+  filter(Sampling_Date >= as.Date('2023-08-17'))
+
+head(sub_AUG_2)
+
+# barnacle count
+
+glm_AUG_2<- glm(Barnacle_Count ~ Pad_Colour*Pad_Region, data = sub_AUG_2, family = poisson)
+
+dispersiontest(glm_AUG_2)
+
+glm.nb_AUG_2<- glm.nb(Barnacle_Count ~ Pad_Colour*Pad_Region, data = sub_AUG_2)
+
+odTest(glm.nb_AUG_2)
+
+#doing glm for count data with poisson or negative binoial (if overdispersed)
+#negative binomial
+
+summary(glm.nb_AUG_2)
+
+
+# barnacle size
+
+lm_AUG_2<- lm(AVG_Banacle_Size ~ Pad_Colour*Pad_Region, data = sub_AUG_2)
+
+summary(lm_AUG_2)
+
+
+```
+
+
+```{r}
+# subset data for SEP 1
+
+sub_SEP_1 <- brighton %>%
+  filter(Sampling_Date >= as.Date('2023-09-01'))
+                              
+head(sub_SEP_1)
+
+
+# barnacle count
+
+glm_SEP_1<- glm(Barnacle_Count ~ Pad_Colour*Pad_Region, data = sub_SEP_1, family = poisson)
+
+dispersiontest(glm_SEP_1)
+
+glm.nb_SEP_1<- glm.nb(Barnacle_Count ~ Pad_Colour*Pad_Region, data = sub_SEP_1)
+
+odTest(glm.nb_SEP_1)
+
+#doing glm for count data with poisson or negative binoial (if overdispersed)
+#negative binomial
+
+summary(glm.nb_SEP_1)
+
+
+# barnacle size 
+
+lm_SEP_1<- lm(AVG_Banacle_Size ~ Pad_Colour*Pad_Region, data = sub_SEP_1)
+
+summary(lm_SEP_1)
+
+
+```
+
+
+```{r}
+ # subset data for SEP 2
+
+sub_SEP_2 <- brighton %>%
+  filter(Sampling_Date >= as.Date('2023-09-15'))
+
+head(sub_SEP_2)
+
+
+
+# barnacle count
+sep_2_DIA <- lm(Diatoms ~ Pad_Colour*Pad_Region, data = sub_SEP_2)
+
+summary(sep_2_DIA)
+
+plot(sep_2_DIA)
+
+boxplot(Diatoms ~ Pad_Colour*Pad_Region, data = sub_SEP_2)
+
+
+glm_SEP_2<- glm(Barnacle_Count ~ Pad_Colour*Pad_Region, data = sub_SEP_2, family = poisson)
+
+dispersiontest(glm_SEP_2)
+
+glm.nb_SEP_2<- glm.nb(Barnacle_Count ~ Pad_Colour*Pad_Region, data = sub_SEP_2)
+
+odTest(glm.nb_SEP_2)
+
+#doing glm for count data with poisson or negative binoial (if overdispersed)
+#negative binomial
+
+summary(glm.nb_SEP_2)
+
+plot(glm.nb_SEP_2)
+
+boxplot(Barnacle_Count ~ Pad_Colour*Pad_Region, data = sub_SEP_2)
+
+#boxplot shows synergistic
+#negative binomial estimates cant be used as normal lm
+#nb.glm - nutirnets had veyry stong effect on barnacle size 
+#white pads - went from this number to thi... (+- SE) + inc. P-value
+#similarly pad colour also inflcuenced number of bbarnacles
+#warmed = more (polluted increase of .. banracles w/ SE)
+#interaction between 2 - synergistic 
+
+#methods for stats- glm for count data - cant use standard linear regression
+#used poisson - if ushowed overdispersion used nb.glm as more robust ot overdispersion
+#checked assumptions fo tests met - inspect residuals
+#barnacle count - 
+
+
+
+#table independant efect of pad colour,,region + interaction
+#w/ collumns for each sampling date
+#shade box based on sig. - colour code for significance
+#inc. p value OR effect size
+#pick key response variables
+```
+
+```{r}
+# barnacle size
+
+lm_SEP_2<- lm(AVG_Barnacle_Size ~ Pad_Colour*Pad_Region, data = sub_SEP_2)
+
+
+```
+
+
+
+### Experimenting with step and AIC values to find the best model
+```{r}
+#AIC table for best model fit
+
+
+#nested model comparison - compare smaller models with larger models with common predictors
+#step function - include direction of variable selection 
+#backward - start with full and drop one at a time
+#forward - add one predictora at a time
+#both direction - weach time add variable - check to see if variable shouldbe dropped at same time
+#both = default
+
+#Remove rows with any NA values
+brighton_clean <- na.omit(brighton)
+
+# Now, fit the model using the cleaned dataset without missing values
+count.model <- lm(Barnacle_Count ~ Pad_Region + Pad_Colour + Pad_Region*Pad_Colour + Phosphorous + Temperature + Max_Logger_Temp +  Precipitation + Phytoplankton + Solar_Insolation + Wind_Speed + Diatoms + Green_Algae + Cyanobacteria, data = brighton)
+
+summary(count.model)
+
+count.model.final <-step(count.model) # both
+#can't include nitrate as missing values
+
+summary(model_final)
+
+```
+
+```{r}
+
+# try step for each sampling date
+
+
+sub_JUL_2 <- brighton %>%
+  filter(Sampling_Date >= as.Date('2023-07-20'))
+
+                              
+head(sub_JUL_2)
+
+lm_JUL_2<- lm(Barnacle_Count ~ Pad_Colour*Pad_Region + Pad_Colour + Pad_Region + Precipitation + Max_Logger_Temp, data = sub_JUL_2)
+
+summary(lm_JUL_2)
+
+JUL_count.model.final <-step(lm_JUL_2) # both
+#can't include nitrate as missing values
+
+summary(JUL_count.model.final)
+
+#try use arima frot this..
+#dont use on every tp 
+#use variables interested in
+#anlysis
+#1 - GLMs per time point - effects of treatments - boxplots + ts plots
+#2 - final time point  or 2 tp
+#model selection process to find specific mechanisms 
+#pad-colour - mena or max temp - effects of preip - nutrient - nitrates + phosphates
+#auto arima function uses AIC
+
+
+
+```
+
+```{r}
+
+#try step for diff. repsosne variable
+
+sub_JUL_2 <- brighton %>%
+  filter(Sampling_Date >= as.Date('2023-07-20'))
+
+                              
+head(sub_JUL_2)
+
+lm_JUL_2<- lm(AVG_Banacle_Size ~ Pad_Colour*Pad_Region + Pad_Colour + Pad_Region + Precipitation + Max_Logger_Temp, data = sub_JUL_2)
+
+summary(lm_JUL_2)
+
+JUL_count.model.final <-step(lm_JUL_2) # both
+#can't include nitrate as missing values
+
+summary(JUL_count.model.final)
+
+```
+
+
+
+```{r}
+
+#try step for diff. repsosne variable
+
+sub_JUL_2 <- brighton %>%
+  filter(Sampling_Date >= as.Date('2023-07-20'))
+
+
+lm_JUL_2<- lm(Diatoms ~ Pad_Colour*Pad_Region + Pad_Colour + Pad_Region + Precipitation + Max_Logger_Temp, data = sub_JUL_2)
+
+#use specific date to remove random effect of plate repeats
+
+summary(lm_JUL_2)
+
+JUL_count.model.final <-step(lm_JUL_2) # both
+#can't include nitrate as missing values
+
+#summary(JUL_count.model.final)
+```
+```{r}
+
+#try step for diff. repsosne variable
+
+sub_JUL_2 <- brighton %>%
+  filter(Sampling_Date >= as.Date('2023-07-20'))
+
+                              
+head(sub_JUL_2)
+
+lm_JUL_2<- lm(Cyanobacteria ~ Pad_Colour*Pad_Region + Pad_Colour + Pad_Region + Precipitation + Max_Logger_Temp, data = sub_JUL_2)
+
+summary(lm_JUL_2)
+
+JUL_count.model.final <-step(lm_JUL_2) # both
+#can't include nitrate as missing values
+
+summary(JUL_count.model.final)
+```
+
+
+```{r}
+#try find best model by trying all combinations and testing AIC values
+
+
+# Ensure you have the correct dataset loaded and it's clean
+
+# List of all main variables to consider for model combinations
+variables <- c("Pad_Region", "Pad_Colour", "Phosphorous", "Temperature", "Max_Logger_Temp", "Precipitation", "Nitrate")
+
+# Initialize an empty data frame to store model results
+model_results <- data.frame(Model = character(), AIC = numeric(), stringsAsFactors = FALSE)
+
+# Generate all combinations of the variables
+combos <- unlist(lapply(1:length(variables), function(n) combn(variables, n, simplify = FALSE)), recursive = FALSE)
+
+# Loop through each combination
+for(combo in combos) {
+  # Create the formula string for the current combination
+  formula_str <- paste("Barnacle_Count ~", paste(combo, collapse = " + "))
+  
+  # If both Pad_Region and Pad_Colour are in the combination, add their interaction term
+  if("Pad_Region" %in% combo && "Pad_Colour" %in% combo) {
+    formula_str <- paste(formula_str, "+ Pad_Region:Pad_Colour")
+  }
+  
+  # Fit the linear model using the constructed formula
+  model <- lm(as.formula(formula_str), data = brighton)
+  
+  # Calculate the AIC for the model
+  aic_val <- AIC(model)
+  
+  # Append the model and its AIC to the results dataframe
+  model_results <- rbind(model_results, data.frame(Model = formula_str, AIC = aic_val))
+}
+
+# Sorting the results by AIC
+model_results <- model_results %>% arrange(AIC)
+
+# Displaying the sorted results
+print(model_results)
+
+
+# Assuming model_results is your dataframe
+library(knitr)
+library(kableExtra)
+
+
+
+kable(model_results, "html", booktabs = TRUE) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
+
+
+```
+
+```{r}
+output <- lm(Barnacle_Count ~ Pad_Region + Pad_Colour + Max_Logger_Temp + Precipitation + Nitrate + Pad_Region:Pad_Colour, brighton)
+summary(output)
+```
+
+
+
+
+
+```{r pressure, echo=FALSE}
+
+
+# Create a list of subsets based on all combinations of 'sampling region' and 'pad colour'
+subset_list <- split(brighton, list(brighton$Pad_Region, brighton$Pad_Colour))
+
+# Access a specific subset (e.g., Region1 + Color1)
+p.w.sub <- subset_list[["P.W"]]
+p.b.sub <- subset_list[["P.B"]]
+n.w.sub <- subset_list[["N.W"]]
+n.b.sub <- subset_list[["N.B"]]
+
+
+
+#PW
+
+# View the subset p.w
+head(p.w.sub)
+
+p.w.sub <- p.w.sub %>%
+  group_by(Sampling_Date) %>%
+  summarise(avg_Barnacle_Count = mean(Barnacle_Count, na.rm = TRUE))
+
+head(p.w.sub)
+
+# Create a zoo object with irregular time points
+p.w.ts <- zoo(p.w.sub$avg_Barnacle_Count, order.by = p.w.sub$Sampling_Date)
+
+
+# Remove rows with NA, NaN, Inf, or -Inf in the time series
+p.w.ts <- na.omit(p.w.ts) # Removes rows with NA
+p.w.ts <- p.w.ts[is.finite(p.w.ts)] # Keeps only finite values
+
+
+# Step 1: Visual Inspection
+plot(p.w.ts)
+
+
+# Fit ARIMA model
+
+p.w_arima <- auto.arima(p.w.ts)
+
+# Step 2 & 3: Check for Stationarity and Identify ARIMA parameters
+# The auto.arima function can help identify the best (p,d,q) automatically
+#model_arima <- arima(p.w.ts, order = c(p, d, q))
+
+# View the model summary
+summary(p.w_arima)
+
+# Step 5: Diagnostic Checking
+checkresiduals(p.w_arima)
+
+# Step 6: Forecasting
+#forecasts <- forecast(model_arima, h=20) # 'h' is the number of periods to forecast ahead
+#plot(forecasts)
+
+```
+
+```{r}
+
+
+#PB
+
+p.b.sub <- p.b.sub %>%
+  group_by(Sampling_Date) %>%
+  summarise(avg_Barnacle_Count = mean(Barnacle_Count, na.rm = TRUE))
+
+head(p.b.sub)
+
+# Create a zoo object with irregular time points
+p.b.ts <- zoo(p.b.sub$avg_Barnacle_Count, order.by = p.b.sub$Sampling_Date)
+
+# Remove rows with NA, NaN, Inf, or -Inf in the time series
+p.b.ts <- na.omit(p.b.ts) # Removes rows with NA
+p.b.ts <- p.b.ts[is.finite(p.b.ts)] # Keeps only finite values
+
+# Step 1: Visual Inspection
+plot(p.b.ts)
+
+# Fit ARIMA model
+
+p.b_arima <- auto.arima(p.b.ts)
+
+# Step 2 & 3: Check for Stationarity and Identify ARIMA parameters
+
+# View the model summary
+summary(p.b_arima)
+
+# Step 5: Diagnostic Checking
+checkresiduals(p.b_arima)
+
+
+```
+
+
+
+
+```{r pressure, echo=FALSE}
+
+# NW
+
+n.w.sub <- n.w.sub %>%
+  group_by(Sampling_Date) %>%
+  summarise(avg_Barnacle_Count = mean(Barnacle_Count, na.rm = TRUE))
+
+head(n.w.sub)
+
+# Create a zoo object with irregular time points
+n.w.ts <- zoo(n.w.sub$avg_Barnacle_Count, order.by = n.w.sub$Sampling_Date)
+
+# Remove rows with NA, NaN, Inf, or -Inf in the time series
+n.w.ts <- na.omit(n.w.ts) # Removes rows with NA
+n.w.ts <- n.w.ts[is.finite(n.w.ts)] # Keeps only finite values
+
+# Step 1: Visual Inspection
+plot(n.w.ts)
+
+# Fit ARIMA model
+
+n.w_arima <- auto.arima(n.w.ts)
+
+# Step 2 & 3: Check for Stationarity and Identify ARIMA parameters
+
+# View the model summary
+summary(n.w_arima)
+
+# Step 5: Diagnostic Checking
+checkresiduals(n.w_arima)
+
+
+```
+
+
+
+
+```{r pressure, echo=FALSE}
+
+
+
+# NB
+
+n.b.sub <- n.b.sub %>%
+  group_by(Sampling_Date) %>%
+  summarise(avg_Barnacle_Count = mean(Barnacle_Count, na.rm = TRUE))
+
+head(n.b.sub)
+
+# Create a zoo object with irregular time points
+n.b.ts <- zoo(n.b.sub$avg_Barnacle_Count, order.by = n.b.sub$Sampling_Date)
+
+# Remove rows with NA, NaN, Inf, or -Inf in the time series
+n.b.ts <- na.omit(n.b.ts) # Removes rows with NA
+n.b.ts <- n.b.ts[is.finite(n.b.ts)] # Keeps only finite values
+
+# Step 1: Visual Inspection
+plot(n.b.ts)
+
+# Fit ARIMA model
+
+n.b_arima <- auto.arima(n.b.ts)
+
+# Step 2 & 3: Check for Stationarity and Identify ARIMA parameters
+
+# View the model summary
+summary(n.b_arima)
+
+# Step 5: Diagnostic Checking
+checkresiduals(n.b_arima)
+
+```
+
+```{r}
+#include all 4 in same ARIMA model for multivariate statistics
+
+#this doesnt work yet
+#am goign to try form beginning using mAr package
+
+
+# Sample dataset creation for demonstration (Replace this with your actual data)
+# df <- data.frame(time = rep(seq(as.Date("2020-01-01"), by="month", length.out=7), 4),
+#                  value = rnorm(28), # Random values for demonstration
+#                  Group1 = rep(c("N", "P"), each=14),
+#                  Group2 = rep(c("C", "W"), each=7, times=2))
+# load the data 
+brighton <- read.csv("Hotmess_R.csv")
+
+brighton <- brighton %>%
+  mutate(group = paste(Pad_Colour, Pad_Region, sep = "+"))
+
+
+# Unite the grouping columns and then spread to wide format
+df_wide <- brighton %>%
+  unite(col = "group", Pad_Colour, Pad_Region, sep = "+", remove = FALSE) %>%
+  spread(key = "group", value = "Barnacle_Count")
+
+head(brighton)
+
+#df_wide <- df_wide %>%
+#group_by(Sampling_Date) %>%
+ # summarise(avg_Barnacle_Count = mean(Barnacle_Count, na.rm = TRUE))
+
+# At this point, df_wide has columns for time and each of the group combinations (N+C, N+W, P+C, P+W)
+
+# The next steps involve converting this to a ts object for time series analysis
+brighton$Sampling_Date <- as.Date(brighton$Sampling_Date)
+head(brighton)
+head(brighton[c("Sampling_Date", "Barnacle_Count")])
+
+
+# Create a zoo object with irregular time points
+df_wide.zoo <- zoo(brighton$Barnacle_Count, order.by = brighton$Sampling_Date)
+
+head(brighton)
+
+# Remove rows with NA, NaN, Inf, or -Inf in the time series
+brighton <- na.omit(brighton) # Removes rows with NA
+brighton <- brighton[is.finite(brighton)] # Keeps only finite values
+
+# Step 1: Visual Inspection
+plot(brighton)
+
+# Fit ARIMA model
+
+n.b_arima <- auto.arima(n.b.ts)
+
+# Step 2 & 3: Check for Stationarity and Identify ARIMA parameters
+
+# View the model summary
+summary(n.b_arima)
+
+# Step 5: Diagnostic Checking
+checkresiduals(n.b_arima)
+
+install.packages("mAr")
+#use mAr for multivariate ARIMA
+#above code doesn't work
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

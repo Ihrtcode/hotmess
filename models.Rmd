@@ -6,6 +6,7 @@ date: "2024-02-05"
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir ="C:/Users/katie/OneDrive/Documents/UNI/MBiol/Code_R/Katie_R")
 ```
 
 
@@ -31,13 +32,13 @@ library(raster)
 #library(ncdf4)
 #library(raster)
 
-#install.packages("AER")
+
 library(AER) #for dispersion test for possion GLM
 
 library(forecast) # for ARIMA time series
 
 library(zoo) #create irregular time point series
-#install.packages("car")
+
 library(car)
 
 library(dplyr)
@@ -45,13 +46,25 @@ library(tidyr)
 
 library(broom) # For tidy model summaries
 
+
+library(MANOVA.RM)
+
+
+library(vegan)
+
+
+
+library(kableExtra)
+library(knitr)
+
+
 ```
 
 Next, we will load the data (**if this R notebook is in the same directory (i.e., folder) as the data, then you can just call the file name directly**)
 
 ```{r}
 # load the data 
-brighton <- read.csv("Hotmess_R.csv")
+brighton <- read.csv("Hotmess_R_1.csv")
 
 ```
 
@@ -65,7 +78,12 @@ It looks like the variable `Sampling_Date` needs to be changed to "date".
 `Pad_Region` and `Pad_Colour` should also be converted to factors as these are our key explanatory variables. 
 
 ```{r}
+#brighton$Sampling_Date <- as.Date(brighton$Sampling_Date, format = "%Y-%m-%d")
+
 brighton$Sampling_Date <- as.Date(brighton$Sampling_Date, format = "%d/%m/%Y")
+
+formatted_dates <- format(brighton$Sampling_Date, "%Y-%M-%d")
+
 
 brighton$Pad_Region <- as.factor(brighton$Pad_Region)
 
@@ -76,19 +94,50 @@ brighton$total_grazer <- brighton$Gastropod_Count_ON + brighton$Gastropod_Count_
 str(brighton)
 ```
 
-
+#whole time series
 
 ```{r}
 #models for whole time series 
 
 #linear mixed effect model
 
-mm1<- lmer(Barnacle_Count ~ Pad_Colour*Pad_Region + (1 | Pad_ID), data = brighton)
+mm1<- lmer(Barnacle_Count ~ Pad_Colour*Pad_Region + (1 | Pad_ID), data = brighton, REML = TRUE)
+#intrazonal variability - difff. in pad constrution e.g. texturisation
 
 summary(mm1)
 # estimate sd shows how many more in each treatment e.g. pad_colour W is 24.7 more barnacles on white pads
 
+
+
 ```
+#In summary, this model suggests that pad region has a significant effect on barnacle counts, with an additional significant interaction effect between pad color and region. The random effects model captures variability between pads well, suggesting some pads inherently have more barnacles, regardless of the observed predictors. This analysis provides a nuanced understanding of how barnacle counts are influenced by the characteristics of the pads they're found on.
+
+# This matrix shows how the estimates of fixed effects are correlated with each other. High correlation between predictors (multicollinearity) can make estimates unreliable. Here, some correlations are high (e.g., -0.707), suggesting that pad color and region are not independent in their effects on barnacle counts. This is not unusual in interaction models but is something to be aware of when interpreting the results.
+
+# Fixed Effects estimate the effects of your predictors. The baseline ((Intercept)) barnacle count is 18.29, presumably for the reference levels of Pad_Colour and Pad_Region.
+# Pad_ColourW has an estimated effect of 24.71. This means that, all else being equal, pads of color "W" have 24.71 more barnacles than the baseline category, although this effect is not statistically significant (p = 0.14709).
+# Pad_RegionP has a much larger and statistically significant effect, with an estimated increase of 206.26 barnacles (p < 0.001), indicating a strong regional effect.
+# The interaction term Pad_ColourW:Pad_RegionP is also significant (p = 0.00424), with an estimate of 74.74. This suggests that the effect of pad color "W" within region "P" is different from the effect of pad color "W" or region "P" alone. Specifically, it suggests that the combination of being in region "P" and having color "W" increases barnacle counts by more than either factor alone.
+
+# Random Effects show variance components for the random effect of Pad_ID. The standard deviation (Std.Dev.) for Pad_ID is 28.152, indicating variation among pads. The residual standard deviation is 9.472, representing the within-pad variation in barnacle counts not explained by the fixed effects. These help you understand how much of the variability in your response variable is due to differences between pads versus other sources of error.
+
+# The REML criterion at convergence (1300.6) is a measure of the fit of the model, used here since you're fitting the model using Restricted Maximum Likelihood (REML). It's useful for comparing different models on the same dataset; lower values generally indicate a better fit.
+
+# Scaled Residuals
+# Scaled residuals are standardized residuals; their distribution provides insight into the fit of the model. Ideally, residuals should be normally distributed (which is an assumption of linear models). The range from -3.0230 to 3.3112 suggests some potential outliers or extreme values, but doesn't automatically indicate a poor fit.
+
+```{r}
+# this is count data - is lmer approapriate?
+# no 
+
+mm5<- lmer(Barnacle_Count ~ Pad_Colour*Pad_Region + Phytoplankton + (1 | Pad_ID), data = brighton, REML = TRUE)
+summary(mm5)
+
+#adding phytoplankton doesnt improve REML
+```
+
+
+
 
 
 ```{r}
@@ -98,34 +147,77 @@ hist(log_BC)
 ```
 
 ```{r}
-#generalised linear model 
-#not approcpriate as ads are independant as sampled at each date 
-# do for each time point separately to account for this
+#models for whole time series 
 
-glm_1 <- glmer(Barnacle_Count ~ Pad_Colour * Pad_Region + (1 | Pad_ID), data = brighton, family = poisson)
+#linear mixed effect model
 
-#check for dispersion of count data in poisson glm
-#dispersiontest(glm_1)
-# overdispersed 
+mm2<- lmer(Green_Algae ~ Pad_Colour*Pad_Region + (1 | Pad_ID), data = brighton, REML = TRUE)
 
-summary(glm_1)
-Anova(glm_1)
+summary(mm2)
+# estimate sd shows how many more in each treatment e.g. pad_colour W is 24.7 more barnacles on white pads
 
 
-#another method to check whether negative binomial or poisson distribution is more appropriate
-glm_2 <- glm.nb(Barnacle_Count ~ Pad_Colour * Pad_Region + (1 | Pad_ID), data = brighton)
 
-odTest(glm_2)
-#poisson rejected in favor of negative binomial
-#BUT still over dispersed
 
-summary(glm_2)
-#results 
-#why are all results other than interaction 2e-16 
-#pad colour (W) x pad region (p) 6.29e-09 
-#how to change this from W --> B pad colour
+
 ```
 
+```{r}
+#models for whole time series 
+
+#linear mixed effect model
+
+mm3<- lmer(Cyanobacteria ~ Pad_Colour*Pad_Region + (1 | Pad_ID), data = brighton, REML = TRUE)
+
+summary(mm3)
+# estimate sd shows how many more in each treatment e.g. pad_colour W is 24.7 more barnacles on white pads
+
+```
+
+
+```{r}
+#models for whole time series 
+
+#linear mixed effect model
+
+mm4<- lmer(Diatoms ~ Pad_Colour*Pad_Region + (1 | Pad_ID), data = brighton, REML = TRUE)
+
+summary(mm4)
+# estimate sd shows how many more in each treatment e.g. pad_colour W is 24.7 more barnacles on white pads
+
+```
+
+#generalised linear model
+
+```{r}
+# this is invalid as you can't include random effects in glm and for whoel time series with repeated sampling of the same pad we need to include this random effect 
+# therefore it must be split unto separate dates to test using glm
+
+
+glm1 <- glm(Barnacle_Count ~ Pad_Colour*Pad_Region + (1 | Pad_ID), data = brighton, family = quasipoisson)
+
+summary(glm1)
+#good fix as 20872.71 on 167 df to 881.75 on 164 df
+#cant use boxcox as glm w/ count data
+
+Anova(glm1)
+
+glm2 <- glm(total_grazer ~ Pad_Colour*Pad_Region + (1 | Pad_ID), data = brighton, family = quasipoisson)
+
+summary(glm2)
+#good fix as 20872.71 on 167 df to 881.75 on 164 df
+#cant use boxcox as glm w/ count data
+
+Anova(glm2)
+
+
+```
+
+
+
+
+# glm and lm
+## separate dates 
 ### Individual sampling date linear mixed model for barnacle COUNT + SIZE
 
 ```{r}
@@ -134,10 +226,12 @@ summary(glm_2)
   #use argument family = poisson for count
   #use argument family = gaussian for normal distributed data
 
-sub_JUN_1 <- brighton %>%
-  filter(Sampling_Date >= as.Date('2023-06-20'))
+
+sub_JUN_1 <- dplyr::filter(brighton, Sampling_Date == as.Date('2023-06-20'))
 
 head(sub_JUN_1)
+
+unique(sub_JUN_1$Sampling_Date)
 
 
 #barnacle count
@@ -152,8 +246,10 @@ odTest(glm.nb_JUN_1)
 
 #doing glm for count data with poisson or negative binoial (if overdispersed)
 #negative binomial
+anova(glm.nb_JUN_1)
 
 summary(glm.nb_JUN_1)
+
 
 
 ```
@@ -161,21 +257,62 @@ summary(glm.nb_JUN_1)
 ```{r}
 # barnacle size
 
-glm_JUN_1<- glm(AVG_Banacle_Size ~ Pad_Colour*Pad_Region, data = sub_JUN_1)
+S_JUN_1<- lm(AVG_Banacle_Size ~ Pad_Colour*Pad_Region, data = sub_JUN_1)
 
-summary(glm_JUN_1)
+summary(S_JUN_1)
+
+boxCox(S_JUN_1)
+
+S_JUN_1<- glm(AVG_Banacle_Size ~ Pad_Colour*Pad_Region, data = sub_JUN_1)
+
+summary(S_JUN_1)
+
+Anova(S_JUN_1)
 
 ```
 ```{r}
 GAS_glm_JUN_1<- glm(total_grazer ~ Pad_Colour*Pad_Region, data = sub_JUN_1)
 
+
 #not normal distribution
 plot(GAS_glm_JUN_1)
 
 
-anova(GAS_glm_JUN_1)
+Anova(GAS_glm_JUN_1)
 summary(GAS_glm_JUN_1)
 #only effect of pollution not colour as they are motile so warming treatment has less effect
+
+
+
+
+
+```
+
+```{r}
+
+#trying out transformations
+# Check minimum value
+min_value <- min(sub_JUN_1$total_grazer, na.rm = TRUE)
+
+# If min_value <= 0, add a constant to make all values positive
+if (min_value <= 0) {
+  constant_to_add <- abs(min_value) + 1
+  sub_JUN_1$total_grazer_transformed <- sub_JUN_1$total_grazer + constant_to_add
+  
+  # Create a new linear model with the transformed response variable
+  GAS_lm_JUN_1_transformed <- lm(total_grazer_transformed ~ Pad_Colour*Pad_Region, data = sub_JUN_1)
+}
+
+
+boxcox(GAS_lm_JUN_1_transformed)
+
+
+# Assuming your_data is the column you want to transform
+ sub_JUN_1$total_grazer_transformed.2 <- 1 / sub_JUN_1$total_grazer_transformed
+
+# Check the transformation visually
+hist(sub_JUN_1$total_grazer_transformed.2, main = "Histogram of 1/x Transformed Data", xlab = "Transformed Data")
+
 
 ```
 
@@ -183,10 +320,10 @@ summary(GAS_glm_JUN_1)
 ```{r}
 # subset data for JUL 1
 
-sub_JUL_1 <- brighton %>%
-  filter(Sampling_Date >= as.Date('2023-07-06'))
+sub_JUL_1 <- dplyr::filter(brighton, Sampling_Date == as.Date('2023-07-06'))
 
 head(sub_JUL_1)
+
 
 
 # barnacle count
@@ -203,26 +340,28 @@ odTest(glm.nb_JUL_1)
 #negative binomial
 
 summary(glm.nb_JUL_1)
+anova(glm.nb_JUL_1)
 
 ```
 
 ```{r}
 # barnacle size
 
-glm_JUL_1<- glm(AVG_Banacle_Size ~ Pad_Colour*Pad_Region, data = sub_JUL_1)
+S_JUL_1<- glm(AVG_Banacle_Size ~ Pad_Colour*Pad_Region, data = sub_JUL_1)
 
-summary(glm_JUL_1)
-anova(glm_JUL_1)
+summary(S_JUL_1)
+Anova(S_JUL_1)
+
 ```
 
 ```{r}
 
 # subset data for JUL 2
 
-sub_JUL_2 <- brighton %>%
-  filter(Sampling_Date >= as.Date('2023-07-20'))
 
-                              
+
+sub_JUL_2 <- dplyr::filter(brighton, Sampling_Date == as.Date('2023-07-20')) 
+                             
 head(sub_JUL_2)
 
 glm_JUL_2<- glm(Barnacle_Count ~ Pad_Colour*Pad_Region, data = sub_JUL_2, family = poisson)
@@ -238,16 +377,20 @@ odTest(glm.nb_JUL_2)
 
 summary(glm.nb_JUL_2)
 
+anova(glm.nb_JUL_2)
+
+
+
 ```
 
 ```{r}
 
 # barncale size
 
-lm_JUL_2<- lm(AVG_Banacle_Size ~ Pad_Colour*Pad_Region, data = sub_JUL_2)
+S_JUL_2<- glm(AVG_Banacle_Size ~ Pad_Colour*Pad_Region, data = sub_JUL_2)
 
-summary(lm_JUL_2)
-
+summary(S_JUL_2)
+Anova(S_JUL_2)
 
 ```
 
@@ -255,8 +398,7 @@ summary(lm_JUL_2)
 
 # subset data for AUG 1
 
-sub_AUG_1 <- brighton %>%
-  filter(Sampling_Date >= as.Date('2023-08-01'))
+sub_AUG_1 <- dplyr::filter(brighton, Sampling_Date == as.Date('2023-08-01'))
 
 head(sub_AUG_1)
 
@@ -277,15 +419,23 @@ odTest(glm.nb_AUG_1)
 
 summary(glm.nb_AUG_1)
 
+anova(glm.nb_AUG_1)
+
 ```
 
 ```{r}
 
 # barnacle size
 
-lm_AUG_1<- lm(AVG_Banacle_Size ~ Pad_Colour*Pad_Region, data = sub_AUG_1)
+S_AUG_1<- glm(AVG_Banacle_Size ~ Pad_Colour*Pad_Region, data = sub_AUG_1)
 
-summary(lm_AUG_1)
+summary(S_AUG_1)
+
+Anova(S_AUG_1)
+
+
+
+
 
 
 ```
@@ -293,8 +443,8 @@ summary(lm_AUG_1)
 ```{r}
 # subset data for AUG 2
 
-sub_AUG_2 <- brighton %>%
-  filter(Sampling_Date >= as.Date('2023-08-17'))
+
+sub_AUG_2 <- dplyr::filter(brighton, Sampling_Date == as.Date('2023-08-17'))
 
 head(sub_AUG_2)
 
@@ -313,12 +463,18 @@ odTest(glm.nb_AUG_2)
 
 summary(glm.nb_AUG_2)
 
+anova(glm.nb_AUG_2)
+
+
 
 # barnacle size
 
-lm_AUG_2<- lm(AVG_Banacle_Size ~ Pad_Colour*Pad_Region, data = sub_AUG_2)
+S_AUG_2<- glm(AVG_Banacle_Size ~ Pad_Colour*Pad_Region, data = sub_AUG_2)
 
-summary(lm_AUG_2)
+
+summary(S_AUG_2)
+
+Anova(S_AUG_2)
 
 
 ```
@@ -327,8 +483,8 @@ summary(lm_AUG_2)
 ```{r}
 # subset data for SEP 1
 
-sub_SEP_1 <- brighton %>%
-  filter(Sampling_Date >= as.Date('2023-09-01'))
+
+sub_SEP_1 <- dplyr::filter(brighton, Sampling_Date == as.Date('2023-09-01'))
                               
 head(sub_SEP_1)
 
@@ -348,12 +504,16 @@ odTest(glm.nb_SEP_1)
 
 summary(glm.nb_SEP_1)
 
+anova(glm.nb_SEP_1)
+
 
 # barnacle size 
 
-lm_SEP_1<- lm(AVG_Banacle_Size ~ Pad_Colour*Pad_Region, data = sub_SEP_1)
+S_SEP_1<- glm(AVG_Banacle_Size ~ Pad_Colour*Pad_Region, data = sub_SEP_1)
 
-summary(lm_SEP_1)
+summary(S_SEP_1)
+
+Anova(S_SEP_1)
 
 
 ```
@@ -362,21 +522,11 @@ summary(lm_SEP_1)
 ```{r}
  # subset data for SEP 2
 
-sub_SEP_2 <- brighton %>%
-  filter(Sampling_Date >= as.Date('2023-09-15'))
+sub_SEP_2 <- dplyr::filter(brighton, Sampling_Date == as.Date('2023-09-15'))
 
 head(sub_SEP_2)
 
 
-
-# barnacle count
-sep_2_DIA <- lm(Diatoms ~ Pad_Colour*Pad_Region, data = sub_SEP_2)
-
-summary(sep_2_DIA)
-
-plot(sep_2_DIA)
-
-boxplot(Diatoms ~ Pad_Colour*Pad_Region, data = sub_SEP_2)
 
 
 glm_SEP_2<- glm(Barnacle_Count ~ Pad_Colour*Pad_Region, data = sub_SEP_2, family = poisson)
@@ -409,7 +559,7 @@ boxplot(Barnacle_Count ~ Pad_Colour*Pad_Region, data = sub_SEP_2)
 #checked assumptions fo tests met - inspect residuals
 #barnacle count - 
 
-
+anova(glm.nb_SEP_2)
 
 #table independant efect of pad colour,,region + interaction
 #w/ collumns for each sampling date
@@ -421,7 +571,709 @@ boxplot(Barnacle_Count ~ Pad_Colour*Pad_Region, data = sub_SEP_2)
 ```{r}
 # barnacle size
 
-lm_SEP_2<- lm(AVG_Barnacle_Size ~ Pad_Colour*Pad_Region, data = sub_SEP_2)
+S_SEP_2<- glm(AVG_Banacle_Size ~ Pad_Colour*Pad_Region, data = sub_SEP_2)
+
+summary(S_SEP_2)
+
+Anova(S_SEP_2)
+```
+#GRAZERS
+
+```{r}
+GAS_glm_JUN_1<- glm(total_grazer ~ Pad_Colour*Pad_Region, data = sub_JUN_1)
+
+
+#not normal distribution
+plot(GAS_glm_JUN_1)
+
+
+Anova(GAS_glm_JUN_1)
+summary(GAS_glm_JUN_1)
+#only effect of pollution not colour as they are motile so warming treatment has less effect
+
+```
+```{r}
+GAS_glm_JUL_1<- glm(total_grazer ~ Pad_Colour*Pad_Region, data = sub_JUL_1)
+
+
+#not normal distribution
+plot(GAS_glm_JUL_1)
+
+
+Anova(GAS_glm_JUL_1)
+summary(GAS_glm_JUL_1)
+#only effect of pollution not colour as they are motile so warming treatment has less effect
+
+```
+```{r}
+GAS_glm_JUL_2<- glm(total_grazer ~ Pad_Colour*Pad_Region, data = sub_JUL_2)
+
+
+#not normal distribution
+plot(GAS_glm_JUL_2)
+
+
+Anova(GAS_glm_JUL_2)
+summary(GAS_glm_JUL_2)
+#only effect of pollution not colour as they are motile so warming treatment has less effect
+```
+```{r}
+GAS_glm_AUG_1<- glm(total_grazer ~ Pad_Colour*Pad_Region, data = sub_AUG_1)
+
+
+#not normal distribution
+plot(GAS_glm_AUG_1)
+
+
+Anova(GAS_glm_AUG_1)
+summary(GAS_glm_AUG_1)
+#only effect of pollution not colour as they are motile so warming treatment has less effect
+```
+```{r}
+GAS_glm_AUG_2<- glm(total_grazer ~ Pad_Colour*Pad_Region, data = sub_AUG_2)
+
+
+#not normal distribution
+plot(GAS_glm_AUG_2)
+
+
+Anova(GAS_glm_AUG_2)
+summary(GAS_glm_AUG_2)
+#only effect of pollution not colour as they are motile so warming treatment has less effect
+
+```
+```{r}
+GAS_glm_SEP_1<- glm(total_grazer ~ Pad_Colour*Pad_Region, data = sub_SEP_1)
+
+
+#not normal distribution
+plot(GAS_glm_SEP_1)
+
+
+Anova(GAS_glm_SEP_1)
+
+summary(GAS_glm_SEP_1)
+#only effect of pollution not colour as they are motile so warming treatment has less effect
+```
+```{r}
+GAS_glm_SEP_2<- glm(total_grazer ~ Pad_Colour*Pad_Region, data = sub_SEP_2)
+
+
+#not normal distribution
+plot(GAS_glm_EP_2)
+
+
+Anova(GAS_glm_SEP_2)
+summary(GAS_glm_SEP_2)
+#only effect of pollution not colour as they are motile so warming treatment has less effect
+```
+
+
+# DIATOMS
+
+```{r}
+# barnacle count
+jun_1_DIA <- lm(Diatoms ~ Pad_Colour*Pad_Region, data = sub_JUN_1)
+
+summary(jun_1_DIA)
+
+plot(jun_1_DIA)
+
+boxplot(Diatoms ~ Pad_Colour*Pad_Region, data = sub_JUN_1)
+
+boxcox(jun_1_DIA)
+
+#lambda = 0.5 so do sqrt transform
+
+
+jun_1_DIA_sqrt <- lm(sqrt(Diatoms) ~ Pad_Colour*Pad_Region, data = sub_JUN_1)
+
+plot(jun_1_DIA_sqrt)
+
+summary(jun_1_DIA_sqrt)
+Anova(jun_1_DIA_sqrt)
+```
+
+```{r}
+# barnacle count
+jul_1_DIA <- lm(Diatoms ~ Pad_Colour*Pad_Region, data = sub_JUL_1)
+
+summary(jul_1_DIA)
+
+plot(jul_1_DIA)
+
+boxplot(Diatoms ~ Pad_Colour*Pad_Region, data = sub_JUL_1)
+
+boxcox(jul_1_DIA)
+
+#lambda near to 0 so do log transform
+
+
+jul_1_DIA_log <- lm(log(Diatoms) ~ Pad_Colour*Pad_Region, data = sub_JUL_1)
+
+plot(jul_1_DIA_log)
+
+summary(jul_1_DIA_log)
+Anova(jul_1_DIA_log)
+```
+
+```{r}
+# barnacle count
+##MISSING VALUES - NA
+jul_2_DIA <- lm(Diatoms ~ Pad_Colour*Pad_Region, data = sub_JUL_2)
+
+summary(jul_2_DIA)
+
+plot(jul_2_DIA)
+
+boxplot(Diatoms ~ Pad_Colour*Pad_Region, data = sub_SEP_2)
+
+boxcox(jul_2_DIA)
+
+#lambda near to 0 so do log transform
+
+
+jul_2_DIA_log <- lm(log(Diatoms) ~ Pad_Colour*Pad_Region, data = sub_JUL_2)
+
+plot(jul_2_DIA_log)
+
+summary(jul_2_DIA_log)
+Anova(jul_2_DIA_log)
+```
+
+```{r}
+# barnacle count
+aug_1_DIA <- lm(Diatoms ~ Pad_Colour*Pad_Region, data = sub_AUG_1)
+
+summary(aug_1_DIA)
+
+plot(aug_1_DIA)
+
+boxplot(Diatoms ~ Pad_Colour*Pad_Region, data = sub_AUG_1)
+
+#boxcox(aug_1_DIA)
+
+#lambda near to 0 so do log transform
+
+
+#aug_1_DIA_log <- lm(log(Diatoms) ~ Pad_Colour*Pad_Region, data = sub_AUG_1)
+
+#plot(aug_1_DIA_log)
+
+summary(aug_1_DIA)
+Anova(aug_1_DIA)
+```
+
+```{r}
+# diatoms
+aug_2_DIA <- lm(Diatoms ~ Pad_Colour*Pad_Region, data = sub_AUG_2)
+
+summary(aug_2_DIA)
+
+plot(aug_2_DIA)
+
+boxplot(Diatoms ~ Pad_Colour*Pad_Region, data = sub_AUG_2)
+
+boxcox(aug_2_DIA)
+
+
+
+
+#lambda near to 0 so do log transform
+
+
+sep_2_DIA_log <- lm(log(Diatoms) ~ Pad_Colour*Pad_Region, data = sub_SEP_2)
+
+plot(sep_2_DIA_log)
+
+summary(sep_2_DIA_log)
+```
+
+```{r}
+# barnacle count
+sep_2_DIA <- lm(Diatoms ~ Pad_Colour*Pad_Region, data = sub_SEP_2)
+
+summary(sep_2_DIA)
+
+plot(sep_2_DIA)
+
+boxplot(Diatoms ~ Pad_Colour*Pad_Region, data = sub_SEP_2)
+
+boxcox(sep_2_DIA)
+
+#lambda near to 0 so do log transform
+
+
+sep_2_DIA_log <- lm(log(Diatoms) ~ Pad_Colour*Pad_Region, data = sub_SEP_2)
+
+plot(sep_2_DIA_log)
+
+summary(sep_2_DIA_log)
+```
+
+```{r}
+# barnacle count
+sep_2_DIA <- lm(Diatoms ~ Pad_Colour*Pad_Region, data = sub_SEP_2)
+
+summary(sep_2_DIA)
+
+plot(sep_2_DIA)
+
+boxplot(Diatoms ~ Pad_Colour*Pad_Region, data = sub_SEP_2)
+
+boxcox(sep_2_DIA)
+
+#lambda near to 0 so do log transform
+
+
+sep_2_DIA_log <- lm(log(Diatoms) ~ Pad_Colour*Pad_Region, data = sub_SEP_2)
+
+plot(sep_2_DIA_log)
+
+summary(sep_2_DIA_log)
+```
+# CYANOBACTERIA
+
+
+
+# GREEN ALGAE
+
+
+
+# GRAZER
+
+
+## MANOVAS
+
+```{r}
+##check for normality!!
+## if not normal  - try use permanova instead
+
+grazer_green <- manova(cbind(total_grazer, Green_Algae) ~ Pad_Colour + Pad_Region, data = brighton)
+
+
+summary(grazer_green, test = "Pillai")
+
+summary.aov(grazer_green)
+
+# choose pillai's trace for robustness against violations of normality
+
+```
+#Pad_Colour: The Pillai's trace value for Pad_Colour is 0.016225 with an F-statistic of 1.2534, which results in a p-value of 0.2885. This indicates that, at a conventional alpha level (e.g., 0.05), Pad_Colour does not have a statistically significant multivariate effect on the combined dependent variables (total_grazer and Green_Algae). In other words, the color of the pad doesn't significantly affect the total number of grazers and the amount of green algae together.
+
+#Pad_Region: The Pillai's trace value for Pad_Region is 0.270603 with an F-statistic of 28.1956, which results in a highly significant p-value (3.848e-11). This suggests that Pad_Region has a significant multivariate effect on the combined dependent variables. Therefore, the region where the pad is located significantly affects both the total number of grazers and the amount of green algae.
+
+#Pad_Region is an important factor affecting both the total number of grazers and the amount of green algae, with a clear and significant multivariate effect as well as significant univariate effects on grazers.
+#Pad_Colour does not seem to have a significant effect on either of the dependent variables when considered together (MANOVA) or separately (ANOVA), although it's always important to consider the context of your study, the effect sizes, and the power of  tests before making final conclusions.
+
+```{r}
+#normality checks 
+
+# Histograms
+hist(brighton$total_grazer, main="Histogram of Total Grazer", xlab="Total Grazer")
+hist(brighton$Green_Algae, main="Histogram of Green Algae", xlab="Green Algae")
+
+# QQ Plots
+qqnorm(brighton$total_grazer); qqline(brighton$total_grazer)
+qqnorm(brighton$Green_Algae); qqline(brighton$Green_Algae)
+
+# Shapiro-Wilk Test
+shapiro.test(brighton$total_grazer)
+shapiro.test(brighton$Green_Algae)
+
+# Combine your dependent variables into a new data frame for the MVN analysis
+dependent_vars <- brighton[, c("total_grazer", "Green_Algae")]
+
+# Mardia’s Test for Multivariate Normality
+mvn_result <- mvn(data = dependent_vars, mvnTest = "mardia")
+print(mvn_result)
+
+# Levene's Test for Homogeneity of Variances
+
+# For total_grazer
+leveneTest(cbind(total_grazer, Green_Algae) ~ Pad_Colour + Pad_Region, data = brighton)
+
+# For Green_Algae
+leveneTest(Green_Algae ~ Pad_Colour + Pad_Region, data = brighton)
+
+
+# all very strong rejection of normality both univariate and multivariate so cant use manova
+# try log transformation of dependants
+
+```
+```{r}
+#permanova 
+
+brighton_clean <- na.omit(brighton[, c("AVG_Banacle_Size", "Green_Algae", "Pad_Colour", "Pad_Region")])
+
+# Make sure dep_vars is updated to reflect any rows removed due to missing data
+#Preparing the data for adonis, combining dependent variables into a matrix
+dep_vars_clean <- as.matrix(brighton_clean[, c("AVG_Banacle_Size", "Green_Algae")])
+
+# Now, use adonis2 with the cleaned data
+# Running PERMANOVA with adonis
+#euclidean for quantitative continuous data
+# + Bray-Curtis for count data
+
+permanova_result <- adonis2(dep_vars_clean ~ Pad_Colour + Pad_Region, data = brighton_clean, method = "euclidean")
+
+# Print the results
+print(permanova_result)
+
+```
+
+
+```{r}
+
+count_size <- manova(cbind(Barnacle_Count, AVG_Banacle_Size) ~ Pad_Colour + Pad_Region, data = brighton)
+
+summary(count_size, test = "Pillai")
+
+summary.aov(count_size)
+```
+
+# Pad_Colour:
+
+# Pillai's Trace: 0.47073 indicates the proportion of variance in the dependent variables that is associated with Pad_Colour.
+# Approx F: The F statistic is 72.93, which assesses the significance of the association.
+
+# num Df and den Df: These are the degrees of freedom for the numerator (2, corresponding to the two dependent variables) and for the denominator (164, related to the sample size and number of groups).
+# Pr(>F): The p-value is < 2.2e-16, indicating that the effect of Pad_Colour on the combined dependent variables (barnacle count and average barnacle size) is highly statistically significant.
+
+# Pad_Region:
+
+# Pillai's Trace: 0.93116 suggests a very strong association between Pad_Region and the dependent variables, with a large proportion of variance explained.
+# Approx F: The F statistic is 1109.10, indicating a very strong statistical significance.
+# Pr(>F): The p-value is < 2.2e-16, similar to Pad_Colour, suggesting that the effect of Pad_Region on the combined dependent variables is also highly statistically significant.
+# Overall Interpretation:
+# Both Pad_Colour and Pad_Region have highly significant effects on the combination of barnacle count and average barnacle size. The results suggest that both the color and the region of the pads are strongly associated with differences in these dependent variables.
+# The effect size (as indicated by Pillai's trace) is larger for Pad_Region (0.93116) than for Pad_Colour (0.47073), suggesting that Pad_Region may have a more substantial impact on the variation in barnacle count and average size compared to Pad_Colour.
+# Given the extremely low p-values (< 2.2e-16), we can confidently reject the null hypothesis for both independent variables, indicating there are significant multivariate effects of pad color and region on barnacle count and average size.
+ 
+ 
+```{r}
+brighton_clean_2 <- na.omit(brighton[, c("Barnacle_Count", "total_grazer", "Pad_Colour", "Pad_Region")])
+
+dep_vars_clean_2 <- as.matrix(brighton_clean_2[, c("Barnacle_Count", "total_grazer")])
+
+permanova_result_2 <- adonis2(dep_vars_clean_2 ~ Pad_Colour + Pad_Region, data = brighton_clean_2, method = "bray")
+
+print(permanova_result_2)
+
+##consider changing count data into proportional data first.../ transfromation to reduce variance
+```
+# SumOfSqs (Sum of Squares): Measures the variance explained by each factor. Pad Colour explains a smaller portion of variance (1.1391) compared to Pad Region (23.2073), suggesting Pad Region has a much stronger effect on the distribution of your data (e.g., the counts of grazers and barnacles).
+
+# R2: Represents the proportion of total variance explained by each factor. Pad Colour accounts for about 3.647% of the variance, while Pad Region accounts for a substantial 74.31%. The Residual R2 of 22.043% is the variance not explained by your model.
+
+# F: The F-value is a ratio of the mean squares (variance) explained by a factor to the mean squares of the residual (error). High F-values (27.302 for Pad Colour and 556.237 for Pad Region) suggest that the factor significantly influences your dependent variables, with Pad Region being particularly influential.
+
+# Pr(>F): The p-value indicates the probability of observing an F-value as large as, or larger than, what is observed if the null hypothesis (no effect of the factor on the dependent variables) were true. Both Pad Colour and Pad Region have p-values of 0.001, which is highly significant (denoted by ***), indicating strong evidence against the null hypothesis for both factors.
+
+# Interpretation
+# Pad Region is a major determinant in the variation of the ecological data, having a profound impact on the counts of grazers and barnacles. The large R2 and F-value, along with a highly significant p-value, underscore its importance.
+
+# Pad Colour also influences the ecological data but to a much lesser extent than Pad Region. Despite its smaller effect size, it's statistically significant, suggesting that the colour of pads does affect the counts of grazers and barnacles, albeit less dramatically than the region.
+
+# The residual variance (22.043%) represents the variability in your data not explained by Pad Colour or Pad Region. This could be due to other factors not included in the model or inherent variability in ecological data.
+
+# Statistical Significance: The very low p-values for both factors (<0.001) suggest that the observed associations are unlikely to be due to chance.
+
+# Practical Implications
+# Management or Conservation Efforts: Knowing that Pad Region has a significant impact could inform targeted strategies for managing or conserving grazers and barnacles. Different regions may require tailored approaches.
+
+# Further Research: While Pad Colour has a smaller effect, it's still significant, suggesting that aesthetic or visibility factors (which might be implied by colour) could influence ecological dynamics to some extent. This could be an interesting avenue for further investigation.
+
+# Complexity of Ecological Interactions: The substantial residual variance highlights the complex nature of ecological interactions and suggests that multiple factors (beyond Pad Colour and Region) likely influence the counts of grazers and barnacles. 
+
+```{r}
+
+# now add interaction 
+
+permanova_result_interaction_2 <- adonis2(dep_vars_clean_2 ~ Pad_Colour * Pad_Region, 
+                                        data = brighton_clean_2, 
+                                        method = "bray")
+print(permanova_result_interaction_2)
+
+```
+# Pad Colour: Significant on its own (p < 0.001) with an R2 of 0.03647, indicating a small but significant effect on the dependent variables. This suggests that Pad Colour does influence the variables under study, but the effect size is relatively small.
+
+# Pad Region: Highly significant (p < 0.001) with a high R2 of 0.74310, indicating a strong effect on the dependent variables. This reaffirms the conclusion that Pad Region is a major factor influencing the variables, likely more so than Pad Colour.
+
+# Pad Colour:Pad Region Interaction: The interaction term is also significant (p < 0.001) with an R2 of 0.06750, indicating that the effect of Pad Colour on the dependent variables varies depending on the Pad Region. This interaction suggests that the impact of Pad Colour cannot be fully understood without considering the specific Pad Region, highlighting the complex nature of these environmental influences.
+ 
+#SIMPER amlysis
+
+```{r}
+#'comm'=  community data matrix
+#'group' = factor vector of groupings
+
+brighton_clean_2$Combined_Group <- with(brighton_clean_2, paste(Pad_Colour, Pad_Region, sep="_"))
+
+# Setting up the group based on the combined factor
+group <- brighton_clean_2$Combined_Group
+
+# Perform SIMPER Analysis
+simper_result <- simper(dep_vars_clean_2, group, method = "bray")
+
+# View the SIMPER analysis results
+print(simper_result)
+
+
+```
+#Understanding the Group Identifiers
+#Each identifier (e.g., $W_P_B_P) represents a comparison between two groups. For example, W_P_B_P likely stands for a comparison between "White Pad, Polluted" and "Black Pad, Polluted" groups.
+#The identifiers are shorthand for the specific pairs of conditions being compared, with the letters and symbols representing different Pad_Colour and Pad_Region combinations.
+#Interpreting the Contributions
+#The numbers associated with Barnacle_Count under each group comparison (like 0.9830728 for $W_P_B_P) represent the cumulative contribution of barnacle count differences towards the overall dissimilarity between those two groups.
+#A value close to 1 (or 100% when thinking in percentage terms) indicates that differences in Barnacle_Count #are almost entirely responsible for the observed dissimilarity between those specific groups in your dataset.
+#In essence, these values tell you that Barnacle_Count is a major factor contributing to the differences observed between the various combinations of Pad_Colour and Pad_Region.
+
+
+#High Influence of Barnacle Count: The high cumulative contribution values across all comparisons suggest that differences in barnacle counts between various pad colors and regions are substantial and are the primary driver of dissimilarity between these groups in your dataset.
+#Inter-group Variability: The differences in Barnacle_Count are significant enough to distinguish between the groups, meaning that this variable can be used effectively to understand biodiversity or population distribution patterns related to your treatments or environmental conditions.
+#Focus for Further Research: Given the dominant influence of Barnacle_Count, any conservation, management, or further research efforts might need to consider how various factors (like pollution or temperature, as per your study design) affect barnacle populations specifically.
+
+#total grazer not here as overshadowed by barnacle_count in summary
+ 
+
+```{r}
+
+brighton_clean_2.3 <- na.omit(brighton[, c("Barnacle_Count", "total_grazer", "Pad_Colour", "Pad_Region", "Max_Logger_Temp", "Nitrate")])
+
+dep_vars_clean_2.3 <- as.matrix(brighton_clean_2.3[, c("Barnacle_Count", "total_grazer")])
+
+permanova_result_2.3 <- adonis2(dep_vars_clean_2.3 ~ Pad_Region:Pad_Colour + Max_Logger_Temp + Nitrate, data = brighton_clean_2.3, method = "bray")
+
+print(permanova_result_2.3)
+```
+
+```{r}
+brighton_clean_2.4 <- na.omit(brighton[, c("Barnacle_Count", "total_grazer", "Pad_Colour", "Pad_Region", "Mean_Logger_Temp", "Nitrate")])
+
+dep_vars_clean_2.4 <- as.matrix(brighton_clean_2.4[, c("Barnacle_Count", "total_grazer")])
+
+permanova_result_2.4 <- adonis2(dep_vars_clean_2.4 ~ Pad_Region:Pad_Colour + Mean_Logger_Temp + Nitrate, data = brighton_clean_2.4, method = "bray")
+
+print(permanova_result_2.4)
+```
+
+
+# permanova for cyano + diatoms
+
+```{r}
+brighton_clean_3 <- na.omit(brighton[, c("Cyanobacteria", "Diatoms", "Pad_Colour", "Pad_Region")])
+
+dep_vars_clean_3 <- as.matrix(brighton_clean_3[, c("Cyanobacteria", "Diatoms")])
+
+permanova_result_3 <- adonis2(dep_vars_clean_3 ~ Pad_Colour + Pad_Region, data = brighton_clean_3, method = "euclidean")
+
+print(permanova_result_3)
+```
+```{r}
+# now add interaction
+
+permanova_result_interaction_3 <- adonis2(dep_vars_clean_3 ~ Pad_Colour*Pad_Region, data = brighton_clean_3, method = "euclidean")
+
+print(permanova_result_interaction_3)
+
+# here interaction not sig. 
+```
+
+
+# SIMPER ANALYSIS
+
+```{r}
+brighton_clean_3$Combined_Group <- with(brighton_clean_3, paste(Pad_Colour, Pad_Region, sep="_"))
+
+# Setting up the group based on the combined factor
+group <- brighton_clean_3$Combined_Group
+
+# Perform SIMPER Analysis
+simper_result <- simper(dep_vars_clean_3, group, method = "euclidean")
+
+# View the SIMPER analysis results
+print(simper_result)
+```
+
+# cyano, diatoms, green algae 
+
+```{r}
+brighton_clean_6 <- na.omit(brighton[, c("Cyanobacteria", "Diatoms", "Green_Algae", "Phosphorous", "Nitrate", "Max_Logger_Temp")])
+
+dep_vars_clean_6 <- as.matrix(brighton_clean_6[, c("Cyanobacteria", "Diatoms", "Green_Algae")])
+
+permanova_result_6 <- adonis2(dep_vars_clean_6 ~ Nitrate + Phosphorous + Max_Logger_Temp, data = brighton_clean_6, method = "euclidean")
+
+print(permanova_result_6)
+```
+# NITRATE + PHOSPHOROUS + TEMP
+```{r}
+brighton_clean_7 <- na.omit(brighton[, c("Cyanobacteria", "Diatoms", "Green_Algae", "Phosphorous", "Nitrate", "Mean_Logger_Temp")])
+
+dep_vars_clean_7 <- as.matrix(brighton_clean_7[, c("Cyanobacteria", "Diatoms", "Green_Algae")])
+
+permanova_result_7 <- adonis2(dep_vars_clean_7 ~ Nitrate + Phosphorous + Mean_Logger_Temp, data = brighton_clean_7, method = "euclidean")
+
+print(permanova_result_7)
+```
+
+
+
+```{r}
+brighton_clean_8 <- na.omit(brighton[, c("Cyanobacteria", "Diatoms", "Green_Algae", "Phosphorous", "Nitrate", "Mean_Logger_Temp", )])
+
+dep_vars_clean_8 <- as.matrix(brighton_clean_8[, c("Cyanobacteria", "Diatoms", "Green_Algae")])
+
+permanova_result_8 <- adonis2(dep_vars_clean_8 ~ Nitrate + Phosphorous + Mean_Logger_Temp, data = brighton_clean_8, method = "euclidean")
+
+print(permanova_result_8)
+
+```
+
+
+# MULTIPLE GRAZER SPECIES
+## this wont work as dont have individual counts for each grazer species
+
+
+
+
+# try for all repsonse variables
+```{r}
+
+brighton_clean_all <- na.omit(brighton[, c("Barnacle_Count", "total_grazer", "Pad_Colour", "Pad_Region", "AVG_Banacle_Size", "Green_Algae", "Cyanobacteria", "Diatoms")])
+
+man_all <- manova(cbind(Cyanobacteria, AVG_Banacle_Size, Green_Algae, Cyanobacteria, Diatoms, total_grazer) ~ Pad_Colour + Pad_Region, data = brighton)
+
+summary(man_all, test = "Pillai")
+
+summary.aov(man_all)
+
+```
+
+# Pad_Colour:
+
+# Pillai's Trace: 0.51909 indicates a significant variance in the dependent variables can be explained by Pad_Colour.
+# Approx F: 26.63 suggests the statistical significance of this variance.
+#Pr(>F): < 2.2e-16, highly significant, indicating that Pad_Colour significantly affects the combined dependent variables.
+# Pad_Region:
+
+# Pillai's Trace: 0.93084 shows a very high proportion of the variance in the dependent variables is associated with Pad_Region.
+# Approx F: 331.97, indicating very high statistical significance.
+# Pr(>F): < 2.2e-16, also highly significant, showing Pad_Region has a significant effect on the combined dependent variables.
+# Interpretation of ANOVA for Each Dependent Variable
+# Barnacle_Count: Both Pad_Colour and Pad_Region have highly significant effects.
+# AVG_Banacle_Size: Neither Pad_Colour nor Pad_Region show significant effects.
+# Green_Algae: Pad_Colour and Pad_Region do not significantly impact, though Pad_Region approaches significance (p = 0.05904).
+# Cyanobacteria: Significant effect of Pad_Region but not Pad_Colour.
+# Diatoms: Significant effect of Pad_Region but not Pad_Colour.
+# Total_Grazer: Significant effect of Pad_Region but not Pad_Colour.
+# Overall Interpretation
+# Pad_Region has a pervasive and significant effect across multiple dependent variables, particularly on Barnacle_Count, Cyanobacteria, Diatoms, and total_grazer. This suggests that the region where pads are placed plays a crucial role in determining the ecological outcomes measured.
+# Pad_Colour significantly affects the overall model (as seen in the MANOVA Pillai's Trace test) but, when looking at individual ANOVA outcomes, it primarily impacts Barnacle_Count. The influence of pad color seems more limited compared to pad region.
+# For variables like AVG_Banacle_Size and Green_Algae, neither pad colour nor region shows a significant impact, indicating other factors might be more influential on these specific outcomes.
+
+```{r}
+## check for assumptions
+#do diagnostic plots
+
+#cant try permanova - maybe try tranform?
+names(brighton_clean_all)
+
+
+# Add 1 and log-transform directly within the cbind, no need to reference the dataframe
+man_all_log <- manova(cbind(log(Barnacle_Count + 1), log(AVG_Banacle_Size + 1), log(Green_Algae + 1), log(Cyanobacteria + 1), log(Diatoms + 1), log(total_grazer + 1)) ~ Pad_Colour + Pad_Region, data = brighton_clean_all)
+
+summary(man_all_log, test = "Pillai")
+summary.aov(man_all_log)
+
+```
+# Pad_Colour:
+
+# Pillai's Trace: 0.51909 indicates a significant variance in the dependent variables can be explained by Pad_Colour.
+# Approx F: 26.63 suggests the statistical significance of this variance.
+#Pr(>F): < 2.2e-16, highly significant, indicating that Pad_Colour significantly affects the combined dependent variables.
+# Pad_Region:
+
+# Pillai's Trace: 0.93084 shows a very high proportion of the variance in the dependent variables is associated with Pad_Region.
+# Approx F: 331.97, indicating very high statistical significance.
+# Pr(>F): < 2.2e-16, also highly significant, showing Pad_Region has a significant effect on the combined dependent variables.
+# Interpretation of ANOVA for Each Dependent Variable
+# Barnacle_Count: Both Pad_Colour and Pad_Region have highly significant effects.
+# AVG_Banacle_Size: Neither Pad_Colour nor Pad_Region show significant effects.
+# Green_Algae: Pad_Colour and Pad_Region do not significantly impact, though Pad_Region approaches significance (p = 0.05904).
+# Cyanobacteria: Significant effect of Pad_Region but not Pad_Colour.
+# Diatoms: Significant effect of Pad_Region but not Pad_Colour.
+# Total_Grazer: Significant effect of Pad_Region but not Pad_Colour.
+# Overall Interpretation
+# Pad_Region has a pervasive and significant effect across multiple dependent variables, particularly on Barnacle_Count, Cyanobacteria, Diatoms, and total_grazer. This suggests that the region where pads are placed plays a crucial role in determining the ecological outcomes measured.
+# Pad_Colour significantly affects the overall model (as seen in the MANOVA Pillai's Trace test) but, when looking at individual ANOVA outcomes, it primarily impacts Barnacle_Count. The influence of pad color seems more limited compared to pad region.
+# For variables like AVG_Banacle_Size and Green_Algae, neither pad colour nor region shows a significant impact, indicating other factors might be more influential on these specific outcomes.
+
+```{r}
+#normality checks 
+
+# Histograms
+# Histograms
+hist(log(brighton_clean_all$Barnacle_Count + 1), main = "Histogram of log-transformed Barnacle Count", xlab = "log(Barnacle Count + 1)")
+hist(log(brighton_clean_all$AVG_Banacle_Size + 1), main = "Histogram of log-transformed AVG Barnacle Size", xlab = "log(AVG Barnacle Size + 1)")
+hist(log(brighton_clean_all$Green_Algae + 1), main = "Histogram of log-transformed Green Algae", xlab = "log(Green Algae + 1)")
+hist(log(brighton_clean_all$Cyanobacteria + 1), main = "Histogram of log-transformed Cyanobacteria", xlab = "log(Cyanobacteria + 1)")
+hist(log(brighton_clean_all$Diatoms + 1), main = "Histogram of log-transformed Diatoms", xlab = "log(Diatoms + 1)")
+hist(log(brighton_clean_all$total_grazer + 1), main = "Histogram of log-transformed Total Grazer", xlab = "log(Total Grazer + 1)")
+
+#not normal
+
+# QQ Plots
+# QQ Plots for log-transformed variables
+qqnorm(log(brighton_clean_all$Barnacle_Count + 1)); qqline(log(brighton_clean_all$Barnacle_Count + 1))
+qqnorm(log(brighton_clean_all$AVG_Banacle_Size + 1)); qqline(log(brighton_clean_all$AVG_Banacle_Size + 1))
+qqnorm(log(brighton_clean_all$Green_Algae + 1)); qqline(log(brighton_clean_all$Green_Algae + 1))
+qqnorm(log(brighton_clean_all$Cyanobacteria + 1)); qqline(log(brighton_clean_all$Cyanobacteria + 1))
+qqnorm(log(brighton_clean_all$Diatoms + 1)); qqline(log(brighton_clean_all$Diatoms + 1))
+qqnorm(log(brighton_clean_all$total_grazer + 1)); qqline(log(brighton_clean_all$total_grazer + 1))
+
+#mixture of 
+
+
+# Shapiro-Wilk Test
+shapiro.test(log(brighton_clean_all$Barnacle_Count + 1))
+shapiro.test(log(brighton_clean_all$AVG_Banacle_Size + 1))
+shapiro.test(log(brighton_clean_all$Green_Algae + 1))
+shapiro.test(log(brighton_clean_all$Cyanobacteria + 1))
+shapiro.test(log(brighton_clean_all$Diatoms + 1))
+shapiro.test(log(brighton_clean_all$total_grazer + 1))
+
+
+# Combine your dependent variables into a new data frame for the MVN analysis
+# Creating a new data frame with log-transformed dependent variables
+dependent_vars <- data.frame(
+  log_Barnacle_Count = log(brighton_clean_all$Barnacle_Count + 1),
+  log_AVG_Banacle_Size = log(brighton_clean_all$AVG_Banacle_Size + 1),
+  log_Green_Algae = log(brighton_clean_all$Green_Algae + 1),
+  log_Cyanobacteria = log(brighton_clean_all$Cyanobacteria + 1),
+  log_Diatoms = log(brighton_clean_all$Diatoms + 1),
+  log_total_grazer = log(brighton_clean_all$total_grazer + 1)
+)
+
+
+# Mardia’s Test for Multivariate Normality
+mvn_result <- mvn(data = dependent_vars, mvnTest = "mardia")
+print(mvn_result)
+
+# Levene's Test for Homogeneity of Variances
+
+# For total_grazer
+leveneTest(cbind(log(Barnacle_Count + 1), log(AVG_Banacle_Size + 1), log(Green_Algae + 1), log(Cyanobacteria + 1), log(Diatoms + 1), log(total_grazer + 1)) ~ Pad_Colour + Pad_Region, data = brighton_clean_all)
+
+
+
+# all very strong rejection of normality both univariate and multivariate so cant use manova
+# try log transformation of dependants - tried :(
+```
+
+```{r}
+
 
 
 ```
@@ -854,3 +1706,19 @@ install.packages("mAr")
 ```
 
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+
+
+
+
+
+
+```{r}
+
+subset_data <- dplyr::filter(brighton, Pad_Colour == "W", Pad_Region == "P", Sampling_Date == "2023-09-15")
+
+
+
+mean(subset_data$AVG_Banacle_Size)
+```
+

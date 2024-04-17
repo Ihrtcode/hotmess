@@ -16,6 +16,7 @@ library(tidyverse) # for general organisation
 library(ggplot2)
 library(dplyr)
 library(zoo)
+knitr::opts_knit$set(root.dir ="C:/Users/katie/OneDrive/Documents/UNI/MBiol/Code_R/Katie_R")
 
 ```
 
@@ -27,7 +28,7 @@ When you click the **Knit** button a document will be generated that includes bo
 
 ```{r cars}
 # load the data 
-brighton <- read.csv("Hotmess_R.csv")
+brighton <- read.csv("Hotmess_R_1.csv")
 
 brighton$Sampling_Date <- as.Date(brighton$Sampling_Date, format = "%d/%m/%Y")
 
@@ -68,6 +69,7 @@ for (var in numeric_vars) {
 ```
 ```{r}
 #ADD CODE FOR COMBINATION
+#of what?
 ```
 
 
@@ -106,17 +108,74 @@ combined_plot_b_count <- ggplot() +
                 width = 0.5) +  # Adjust width as needed
   geom_jitter(data = brighton, 
              aes(x = Sampling_Date, y = Barnacle_Count, color = Combination), size = 1, alpha = 0.35, width = 2) +
-  scale_color_manual(values = c("B.N" = "hotpink", "W.N" = "orange", "B.P" = "blue", "W.P" = "green", "B" = "black", "W" = "grey"),
+  scale_color_manual(values = c("B.N" = "darkgoldenrod1",
+                               "W.N" = "black",
+                               "B.P" = "brown2",
+                               "W.P" = "cornflowerblue", "B" = "black", "W" = "grey"),
                      labels = c("B.N" = "Non-Polluted + Warming", "W.N" = "Non-Polluted + Control", "B.P" = "Polluted + Warming", "W.P" = "Polluted + Control")) +
   scale_shape_manual(values = c("N" = 16, "P" = 17),
                      labels = c("N" = "Non-Polluted Region", "P" = "Polluted Region")) +
   labs(title = "Average Barnacle Count Over Time",
        x = "Sampling Date",
        y = "Average Barnacle Count") +
-  theme_minimal()
+  theme_classic()
 
 combined_plot_b_count
  
+
+```
+```{r}
+combined_plot_b_count2 <- ggplot() +
+  geom_line(data = average_barnacle_count, 
+            aes(x = Sampling_Date, y = Average_Banacle_Count, group = Combination, color = Combination)) +
+  geom_point(data = average_barnacle_count, 
+             aes(x = Sampling_Date, y = Average_Banacle_Count, color = Combination), size = 2) +
+  #geom_ribbon(data = data_se, aes(x = Sampling_Date, ymin = Lower, ymax = Upper, group = Combination, fill = Combination), alpha = 0.2) +  # Add this line for shaded areas
+  geom_errorbar(data = data_se_b_count, 
+                aes(x = Sampling_Date, ymin = Lower, ymax = Upper, group = Combination, color = Combination), 
+                width = 0.5) +  # Adjust width as needed
+  geom_jitter(data = brighton, 
+             aes(x = Sampling_Date, y = Barnacle_Count, color = Combination), size = 1, alpha = 0.35, width = 2) +
+  scale_color_manual(values = c("B.N" = "orange",
+                               "W.N" = "grey",
+                               "B.P" = "brown2",
+                               "W.P" = "forestgreen", "B" = "black", "W" = "grey"),
+                     labels = c( "W.N" = "Non-Polluted + Control","B.N" = "Non-Polluted + Warming",  "W.P" = "Polluted + Control", "B.P" = "Polluted + Warming")) +
+  scale_shape_manual(values = c("N" = 16, "P" = 17),
+                     labels = c("N" = "Non-Polluted Region", "P" = "Polluted Region")) +
+  labs(title = "Average Barnacle Count Over Time",
+       x = "Sampling Date",
+       y = "Average Barnacle Count") +
+  theme_classic()
+
+combined_plot_b_count2
+
+```
+```{r}
+combined_plot_b_count2 <- ggplot() +
+  geom_line(data = average_barnacle_count, 
+            aes(x = Sampling_Date, y = Average_Banacle_Count, group = Combination, color = Combination)) +
+  geom_point(data = average_barnacle_count, 
+             aes(x = Sampling_Date, y = Average_Banacle_Count, color = Combination), size = 2) +
+  #geom_ribbon(data = data_se, aes(x = Sampling_Date, ymin = Lower, ymax = Upper, group = Combination, fill = Combination), alpha = 0.2) +  # Add this line for shaded areas
+  geom_errorbar(data = data_se_b_count, 
+                aes(x = Sampling_Date, ymin = Lower, ymax = Upper, group = Combination, color = Combination), 
+                width = 0.5) +  # Adjust width as needed
+  geom_jitter(data = brighton, 
+             aes(x = Sampling_Date, y = Barnacle_Count, color = Combination), size = 1, alpha = 0.35, width = 2) +
+  scale_color_manual(values = c("B.N" = "orange",
+                               "W.N" = "cornflowerblue",
+                               "B.P" = "red2",
+                               "W.P" = "forestgreen", "B" = "black", "W" = "grey"),
+                     labels = c( "W.N" = "Non-Polluted + Control","B.N" = "Non-Polluted + Warming",  "W.P" = "Polluted + Control", "B.P" = "Polluted + Warming")) +
+  scale_shape_manual(values = c("N" = 16, "P" = 17),
+                     labels = c("N" = "Non-Polluted Region", "P" = "Polluted Region")) +
+  labs(title = "Average Barnacle Count Over Time",
+       x = "Sampling Date",
+       y = "Average Barnacle Count") +
+  theme_classic()
+
+combined_plot_b_count2
 
 ```
 
@@ -155,7 +214,10 @@ combined_plot_b_size <- ggplot() +
                 width = 0.5) +  # Adjust width as needed
   geom_jitter(data = brighton, 
              aes(x = Sampling_Date, y = AVG_Banacle_Size, color = Combination), size = 1, alpha = 0.35, width = 2) +
-  scale_color_manual(values = c("B.N" = "hotpink", "W.N" = "orange", "B.P" = "blue", "W.P" = "green", "B" = "black", "W" = "grey"),
+  scale_color_manual(values = c("B.N" = "orange",
+                               "W.N" = "cornflowerblue",
+                               "B.P" = "red2",
+                               "W.P" = "forestgreen", "B" = "black", "W" = "grey"),
                      labels = c("B.N" = "Non-Polluted + Warming", "W.N" = "Non-Polluted + Control", "B.P" = "Polluted + Warming", "W.P" = "Polluted + Control", "B" = "Pad Colour: Black", "W" = "Pad Colour: Grey")) +
   scale_shape_manual(values = c("N" = 16, "P" = 17),
                      labels = c("N" = "Non-Polluted Region", "P" = "Polluted Region")) +
@@ -201,7 +263,10 @@ combined_plot_diatoms <- ggplot() +
                 width = 0.5) +  # Adjust width as needed
   geom_jitter(data = brighton, 
              aes(x = Sampling_Date, y = Diatoms, color = Combination), size = 1, alpha = 0.35, width = 2) +
-  scale_color_manual(values = c("B.N" = "hotpink", "W.N" = "orange", "B.P" = "blue", "W.P" = "green", "B" = "black", "W" = "grey"),
+  scale_color_manual(values = c("B.N" = "orange",
+                               "W.N" = "cornflowerblue",
+                               "B.P" = "red2",
+                               "W.P" = "forestgreen", "B" = "black", "W" = "grey"),
                      labels = c("B.N" = "Non-Polluted + Warming", "W.N" = "Non-Polluted + Control", "B.P" = "Polluted + Warming", "W.P" = "Polluted + Control", "B" = "Pad Colour: Black", "W" = "Pad Colour: Grey")) +
   scale_shape_manual(values = c("N" = 16, "P" = 17),
                      labels = c("N" = "Non-Polluted Region", "P" = "Polluted Region")) +
@@ -253,7 +318,10 @@ combined_plot_cyanobacteria <- ggplot() +
                 width = 0.5) +  # Adjust width as needed
   geom_jitter(data = brighton, 
              aes(x = Sampling_Date, y = Cyanobacteria, color = Combination), size = 1, alpha = 0.35, width = 2) +
-  scale_color_manual(values = c("B.N" = "hotpink", "W.N" = "orange", "B.P" = "blue", "W.P" = "green", "B" = "black", "W" = "grey"),
+  scale_color_manual(values = c("B.N" = "orange",
+                               "W.N" = "cornflowerblue",
+                               "B.P" = "red2",
+                               "W.P" = "forestgreen", "B" = "black", "W" = "grey"),
                      labels = c("B.N" = "Non-Polluted + Warming", "W.N" = "Non-Polluted + Control", "B.P" = "Polluted + Warming", "W.P" = "Polluted + Control", "B" = "Pad Colour: Black", "W" = "Pad Colour: Grey")) +
   scale_shape_manual(values = c("N" = 16, "P" = 17),
                      labels = c("N" = "Non-Polluted Region", "P" = "Polluted Region")) +
@@ -304,13 +372,16 @@ combined_plot_green <- ggplot() +
                 width = 0.5) +  # Adjust width as needed
   geom_jitter(data = brighton, 
              aes(x = Sampling_Date, y = Green_Algae, color = Combination), size = 1, alpha = 0.35, width = 2) +
-  scale_color_manual(values = c("B.N" = "hotpink", "W.N" = "orange", "B.P" = "blue", "W.P" = "green", "B" = "black", "W" = "grey"),
+  scale_color_manual(values = c("B.N" = "orange",
+                               "W.N" = "cornflowerblue",
+                               "B.P" = "red2",
+                               "W.P" = "forestgreen", "B" = "black", "W" = "grey"),
                      labels = c("B.N" = "Non-Polluted + Warming", "W.N" = "Non-Polluted + Control", "B.P" = "Polluted + Warming", "W.P" = "Polluted + Control", "B" = "Pad Colour: Black", "W" = "Pad Colour: Grey")) +
   scale_shape_manual(values = c("N" = 16, "P" = 17),
                      labels = c("N" = "Non-Polluted Region", "P" = "Polluted Region")) +
   labs(title = "Green Algae Concentrations Over Time",
        x = "Sampling Date",
-       y = "Cyanobacteria Concentration") +
+       y = "Green Algae Concentration") +
   theme_minimal()
 
 
@@ -332,15 +403,14 @@ average_grazer <- brighton %>%
 
 
 # Assuming `data` is your original dataset with individual observations
-grazer_se <- average_grazer %>%
+grazer_se <- brighton %>%
   group_by(Sampling_Date, Combination) %>%
-  summarise(
-    Avg = mean(Average_Grazer),
-    SE = sd(Average_Grazer) / sqrt(n()),
-    Lower = Avg - SE,  # Assuming 1 SE for the demonstration
-    Upper = Avg + SE
-  ) %>%
-  ungroup()
+  summarize( Avg = mean(total_grazer, na.rm = TRUE),
+    SE = sd(total_grazer, na.rm = TRUE) / sqrt(n()),  # Calculate SEM based on the total_grazer directly
+    Lower = Avg - SE, 
+    Upper = Avg + SE,
+    .groups = 'drop')
+
 
 
 #grazer plot
@@ -351,19 +421,23 @@ combined_plot_grazer <- ggplot() +
   geom_point(data = average_grazer, 
              aes(x = Sampling_Date, y = Average_Grazer, color = Combination), size = 2) +
   #geom_ribbon(data = data_se, aes(x = Sampling_Date, ymin = Lower, ymax = Upper, group = Combination, fill = Combination), alpha = 0.2) +  # Add this line for shaded areas
-  geom_errorbar(data = data_se, 
+  geom_errorbar(data = grazer_se, 
                 aes(x = Sampling_Date, ymin = Lower, ymax = Upper, group = Combination, color = Combination), 
                 width = 0.5) +  # Adjust width as needed
   geom_jitter(data = brighton, 
              aes(x = Sampling_Date, y = total_grazer, color = Combination), size = 1, alpha = 0.35, width = 2) +
-  scale_color_manual(values = c("B.N" = "hotpink", "W.N" = "orange", "B.P" = "blue", "W.P" = "green", "B" = "black", "W" = "grey"),
+  scale_color_manual(values = c("B.N" = "orange",
+                               "W.N" = "cornflowerblue",
+                               "B.P" = "red2",
+                               "W.P" = "forestgreen", "B" = "black", "W" = "grey"),
                      labels = c("B.N" = "Non-Polluted + Warming", "W.N" = "Non-Polluted + Control", "B.P" = "Polluted + Warming", "W.P" = "Polluted + Control", "B" = "Pad Colour: Black", "W" = "Pad Colour: Grey")) +
   scale_shape_manual(values = c("N" = 16, "P" = 17),
                      labels = c("N" = "Non-Polluted Region", "P" = "Polluted Region")) +
   labs(title = "Grazer Counts Over Time",
        x = "Sampling Date",
        y = "Grazer Count") +
-  theme_minimal()
+  theme_minimal()+
+  scale_y_continuous("Total Grazer count", limits = c(0, 7))
 
 
 combined_plot_grazer
@@ -374,35 +448,45 @@ combined_plot_grazer
 
 ##BOXPLOTS
 
-##change colours to mathc TS graphs?
+##change colours to mathc TS graphs?!!
+
+# change order of boxes !!!!!!!! --> like on 1st boxplot
 
 #Barnacle Count
 
 ```{r}
 
-sub_JUN_1 <- brighton %>%
-  filter(Sampling_Date >= as.Date('2023-06-20'))
+sub_JUN_1 <- dplyr::filter(brighton, Sampling_Date == as.Date('2023-06-20'))
 
 boxplot(Barnacle_Count ~ Pad_Colour*Pad_Region, data = sub_JUN_1,
        xlab = "Treatment group",
        ylab = "Barnacle Count") 
 
 
-BP_Jun_1_BC <- ggplot(sub_JUN_1, aes(x = interaction(Pad_Colour, Pad_Region, sep = " + "), y = Barnacle_Count, fill = interaction(Pad_Colour, Pad_Region, sep = " + ")))+
+# Create a new column for the combined factor with specified levels
+sub_JUN_1$treatment_group <- interaction(sub_JUN_1$Pad_Colour, sub_JUN_1$Pad_Region, sep = " + ")
+
+# Set the factor levels to control the order
+sub_JUN_1$treatment_group <- factor(sub_JUN_1$treatment_group, levels = c("W + N", "B + N", "W + P", "B + P"))
+
+# Now plot
+BP_Jun_1_BC <- ggplot(sub_JUN_1, aes(x = treatment_group, y = Barnacle_Count, fill = treatment_group)) +
   geom_boxplot() +
   labs(title = "Barnacle Count Boxplots",
        x = "Treatment Group",
        y = "Barnacle Count") +
-  theme_minimal() +
+  theme_classic() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  scale_x_discrete(labels = c("B + N" = "Warm + Non-Polluted",
-                              "W + N" = "Control Temperature + Non-Polluted",
-                              "B + P" = "Warm + Polluted",
-                              "W + P" = "Control Temperature + Polluted")) + 
-  scale_fill_manual(values = c("B + N" = "hotpink",
-                               "W + N" = "orange",
-                               "B + P" = "blue",
-                               "W + P" = "green"))
+  scale_x_discrete(labels = c("W + N" = "Non-Polluted + Control",
+                              "B + N" = "Non-Polluted + Warming",
+                              "W + P" = "Polluted + Control",
+                              "B + P" = "Polluted + Warming")) + 
+  scale_fill_manual(values = c("W + N" = "cornflowerblue",
+                               "B + N" = "orange",
+                               "W + P" = "forestgreen",
+                               "B + P" = "brown2"))
+
+
                       
 
 BP_Jun_1_BC
@@ -411,8 +495,7 @@ BP_Jun_1_BC
 ```
 
 ```{r}
-sub_JUL_1 <- brighton %>%
-  filter(Sampling_Date >= as.Date('2023-07-06'))
+sub_JUL_1 <- dplyr::filter(brighton, Sampling_Date == as.Date('2023-07-06'))
 
 
 BP_Jul_1_BC <- ggplot(sub_JUL_1, aes(x = interaction(Pad_Colour, Pad_Region, sep = " + "), y = Barnacle_Count))   +
@@ -429,9 +512,10 @@ BP_Jul_1_BC <- ggplot(sub_JUL_1, aes(x = interaction(Pad_Colour, Pad_Region, sep
 
 BP_Jul_1_BC
 ```
+
 ```{r}
-sub_JUL_2 <- brighton %>%
-  filter(Sampling_Date >= as.Date('2023-07-20'))
+sub_JUL_2 <- dplyr::filter(brighton, Sampling_Date == as.Date('2023-07-20')) 
+
 
 BP_Jul_2_BC <- ggplot(sub_JUL_2, aes(x = interaction(Pad_Colour, Pad_Region, sep = " + "), y = Barnacle_Count))   +
   geom_boxplot() +
@@ -446,10 +530,12 @@ BP_Jul_2_BC <- ggplot(sub_JUL_2, aes(x = interaction(Pad_Colour, Pad_Region, sep
                               "W + P" = "Control Temperature + Polluted")) # Updated custom labels
 
 BP_Jul_2_BC
+
 ```
+
+
 ```{r}
-sub_AUG_1 <- brighton %>%
-  filter(Sampling_Date >= as.Date('2023-08-01'))
+sub_AUG_1 <- dplyr::filter(brighton, Sampling_Date == as.Date('2023-08-01'))
 
 BP_Aug_1_BC <- ggplot(sub_AUG_1, aes(x = interaction(Pad_Colour, Pad_Region, sep = " + "), y = Barnacle_Count))   +
   geom_boxplot() +
@@ -466,9 +552,9 @@ BP_Aug_1_BC <- ggplot(sub_AUG_1, aes(x = interaction(Pad_Colour, Pad_Region, sep
 BP_Aug_1_BC
 
 ```
+
 ```{r}
-sub_AUG_2 <- brighton %>%
-  filter(Sampling_Date >= as.Date('2023-08-17'))
+sub_AUG_2 <- dplyr::filter(brighton, Sampling_Date == as.Date('2023-08-17'))
 
 BP_Aug_2_BC <- ggplot(sub_AUG_2, aes(x = interaction(Pad_Colour, Pad_Region, sep = " + "), y = Barnacle_Count))   +
   geom_boxplot() +
@@ -486,8 +572,7 @@ BP_Aug_2_BC
 
 ```
 ```{r}
-sub_SEP_1 <- brighton %>%
-  filter(Sampling_Date >= as.Date('2023-09-01'))
+sub_SEP_1 <- dplyr::filter(brighton, Sampling_Date == as.Date('2023-09-01'))
 
 BP_Sep_1_BC <- ggplot(sub_SEP_1, aes(x = interaction(Pad_Colour, Pad_Region, sep = " + "), y = Barnacle_Count))   +
   geom_boxplot() +
@@ -503,9 +588,9 @@ BP_Sep_1_BC <- ggplot(sub_SEP_1, aes(x = interaction(Pad_Colour, Pad_Region, sep
 
 BP_Sep_1_BC
 ```
+
 ```{r}
-sub_SEP_2 <- brighton %>%
-  filter(Sampling_Date >= as.Date('2023-09-15'))
+sub_SEP_2 <- dplyr::filter(brighton, Sampling_Date == as.Date('2023-09-15'))
 
 
 BP_Sep_2_BC <- ggplot(sub_SEP_2, aes(x = interaction(Pad_Colour, Pad_Region, sep = " + "), y = Barnacle_Count))   +
@@ -528,7 +613,7 @@ BP_Sep_2_BC
 ```{r}
 #Jun 1
 
-BP_Jun_1_BS <- ggplot(sub_JUN_1, aes(x = interaction(Pad_Colour, Pad_Region, sep = " + "), y = AVG_Banacle_Size)) +
+BP_Jun_1_BS <- ggplot(sub_JUN_1, aes(x = interaction(Pad_Colour, Pad_Region, sep = " + "), y = AVG_Banacle_Size, fill = interaction(Pad_Colour, Pad_Region, sep = " + "))) +
   geom_boxplot() +
   labs(title = "Barnacle Size Boxplots",
        x = "Treatment Group",
@@ -538,7 +623,12 @@ BP_Jun_1_BS <- ggplot(sub_JUN_1, aes(x = interaction(Pad_Colour, Pad_Region, sep
   scale_x_discrete(labels = c("B + N" = "Warm + Non-Polluted",
                               "W + N" = "Control Temperature + Non-Polluted",
                               "B + P" = "Warm + Polluted",
-                              "W + P" = "Control Temperature + Polluted")) # Updated custom labels
+                              "W + P" = "Control Temperature + Polluted")) +
+  scale_fill_manual(values = c("B + N" = "orange",
+                               "W + N" = "cornflowerblue",
+                               "B + P" = "brown2",
+                               "W + P" = "forestgreen"))
+
 
 BP_Jun_1_BS
 ```
@@ -660,10 +750,11 @@ BP_Sep_2_BS
 ##Diatoms
 
 
+
 ```{r}
 #Jun 1
 
-  BP_Jun_1_D <- ggplot(sub_JUN_1, aes(x = interaction(Pad_Colour, Pad_Region, sep = " + "), y = Diatoms)) +
+  BP_Jun_1_D <- ggplot(sub_JUN_1, aes(x = interaction(Pad_Colour, Pad_Region, sep = " + "), y = Diatoms, , fill = interaction(Pad_Colour, Pad_Region, sep = " + "))) +
   geom_boxplot() +
   labs(title = "Diatoms Boxplots",
        x = "Treatment Group",
@@ -673,7 +764,12 @@ BP_Sep_2_BS
   scale_x_discrete(labels = c("B + N" = "Warm + Non-Polluted",
                               "W + N" = "Control Temperature + Non-Polluted",
                               "B + P" = "Warm + Polluted",
-                              "W + P" = "Control Temperature + Polluted")) # Updated custom labels
+                              "W + P" = "Control Temperature + Polluted"))+
+  scale_fill_manual(values = c("B + N" = "orange",
+                               "W + N" = "cornflowerblue",
+                               "B + P" = "brown2",
+                               "W + P" = "forestgreen"))
+# Updated custom labels
 
 BP_Jun_1_D
 ```
@@ -793,10 +889,13 @@ BP_Sep_2_D
 ##Green Algae
 
 
+
+
+
 ```{r}
 #Jun 1
 
-  BP_Jun_1_GA <- ggplot(sub_JUN_1, aes(x = interaction(Pad_Colour, Pad_Region, sep = " + "), y = Green_Algae)) +
+  BP_Jun_1_GA <- ggplot(sub_JUN_1, aes(x = interaction(Pad_Colour, Pad_Region, sep = " + "), y = Green_Algae, , fill = interaction(Pad_Colour, Pad_Region, sep = " + "))) +
   geom_boxplot() +
   labs(title = "Green Algae Boxplots",
        x = "Treatment Group",
@@ -806,7 +905,13 @@ BP_Sep_2_D
   scale_x_discrete(labels = c("B + N" = "Warm + Non-Polluted",
                               "W + N" = "Control Temperature + Non-Polluted",
                               "B + P" = "Warm + Polluted",
-                              "W + P" = "Control Temperature + Polluted")) # Updated custom labels
+                              "W + P" = "Control Temperature + Polluted"))+
+  scale_fill_manual(values = c("B + N" = "orange",
+                               "W + N" = "cornflowerblue",
+                               "B + P" = "brown2",
+                               "W + P" = "forestgreen"))
+
+
 
 BP_Jun_1_GA
 ```
@@ -927,10 +1032,11 @@ BP_Sep_2_GA
 ##Cyanobacteria
 
 
+
 ```{r}
 #Jun 1
 
-  BP_Jun_1_C <- ggplot(sub_JUN_1, aes(x = interaction(Pad_Colour, Pad_Region, sep = " + "), y = Cyanobacteria)) +
+  BP_Jun_1_C <- ggplot(sub_JUN_1, aes(x = interaction(Pad_Colour, Pad_Region, sep = " + "), y = Cyanobacteria, fill = interaction(Pad_Colour, Pad_Region, sep = " + "))) +
   geom_boxplot() +
   labs(title = "Cyanobacteria Boxplots",
        x = "Treatment Group",
@@ -940,7 +1046,11 @@ BP_Sep_2_GA
   scale_x_discrete(labels = c("B + N" = "Warm + Non-Polluted",
                               "W + N" = "Control Temperature + Non-Polluted",
                               "B + P" = "Warm + Polluted",
-                              "W + P" = "Control Temperature + Polluted")) # Updated custom labels
+                              "W + P" = "Control Temperature + Polluted"))+
+  scale_fill_manual(values = c("B + N" = "orange",
+                               "W + N" = "cornflowerblue",
+                               "B + P" = "brown2",
+                               "W + P" = "forestgreen"))
 
 BP_Jun_1_C
 ```
@@ -1057,8 +1167,10 @@ BP_Sep_2_C
 ```
 ##GRAZER BOXPLOTS
 
+
+
 ```{r}
-BP_Jun_1_GA <- ggplot(sub_JUN_1, aes(x = interaction(Pad_Colour, Pad_Region, sep = " + "), y = total_grazer)) +
+BP_Jun_1_GA <- ggplot(sub_JUN_1, aes(x = interaction(Pad_Colour, Pad_Region, sep = " + "), y = total_grazer, fill = interaction(Pad_Colour, Pad_Region, sep = " + "))) +
   geom_boxplot() +
   labs(title = "Grazer Boxplots",
        x = "Treatment Group",
@@ -1068,7 +1180,11 @@ BP_Jun_1_GA <- ggplot(sub_JUN_1, aes(x = interaction(Pad_Colour, Pad_Region, sep
   scale_x_discrete(labels = c("B + N" = "Warm + Non-Polluted",
                               "W + N" = "Control Temperature + Non-Polluted",
                               "B + P" = "Warm + Polluted",
-                              "W + P" = "Control Temperature + Polluted")) # Updated custom labels
+                              "W + P" = "Control Temperature + Polluted"))+
+  scale_fill_manual(values = c("W + N" = "cornflowerblue",
+                               "B + N" = "orange",
+                               "W + P" = "forestgreen",
+                               "B + P" = "brown2"))
 
 BP_Jun_1_GA
 ```
@@ -1214,6 +1330,305 @@ plot(p.w.ts)
 
 ```
 ```{r}
+# variation between treatment plots
+
+brighton$treatment <- with(brighton, paste0(Pad_Region, "_", Pad_Colour))
+
+diatom_data <- brighton %>%
+  dplyr::select(treatment, Diatoms)
+
+mean_Diatoms <- diatom_data %>%
+  group_by(treatment) %>%
+  summarise(mean_diatoms = mean(Diatoms, na.rm = TRUE),
+            sd = sd(Diatoms, na.rm = TRUE),
+            n = n()) %>%
+  mutate(se = sd / sqrt(n))
+
+# Assuming you want to find differences from a baseline treatment, set the baseline
+baseline_value <- mean_Diatoms %>%
+  filter(treatment == "N_W") %>% # Replace YourBaselineTreatment with your actual baseline
+  pull(mean_diatoms)
+
+
+
+
+# Calculate differences from the baseline
+mean_Diatoms$difference_from_baseline <- mean_Diatoms$mean_diatoms - baseline_value
+
+mean_Diatoms$treatment <- factor(mean_Diatoms$treatment, levels = c("N_W", "N_B", "P_W", "P_B"))
+
+
+
+
+diatoms_bar <- ggplot(mean_Diatoms, aes(x = treatment, y = difference_from_baseline, fill = treatment)) +
+  geom_bar(stat = "identity", position = position_dodge(), width = 0.5, color = "black", size = 1) + # Using size for thicker outline
+  geom_errorbar(aes(ymin = difference_from_baseline - se, ymax = difference_from_baseline + se), width = 0.2, position = position_dodge(0.5)) + # Adjust error bars
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  labs(title = "Difference from Baseline (N_W) in Diatom Measurements",
+       x = "Treatment",
+       y = "Difference from Baseline") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_fill_manual(values = c("N_B" = "orange",
+                               "N_W" = "blue",
+                               "P_B" = "hotpink",
+                               "P_W" = "green" ))
+
+                                
+
+
+
+diatoms_bar
+
+```
+
+```{r}
+# variation between treatment plots
+
+brighton$treatment <- with(brighton, paste0(Pad_Region, "_", Pad_Colour))
+
+Cyanobacteria_data <- brighton %>%
+  dplyr::select(treatment, Cyanobacteria)
+
+mean_Cyanobacteria <- Cyanobacteria_data %>%
+  group_by(treatment) %>%
+  summarise(mean_cyanobacteria = mean(Cyanobacteria, na.rm = TRUE),
+            sd = sd(Cyanobacteria, na.rm = TRUE),
+            n = n()) %>%
+  mutate(se = sd / sqrt(n))
+
+# Assuming you want to find differences from a baseline treatment, set the baseline
+baseline_value <- mean_Cyanobacteria %>%
+  filter(treatment == "N_W") %>% # Replace YourBaselineTreatment with your actual baseline
+  pull(mean_cyanobacteria)
+
+
+
+
+# Calculate differences from the baseline
+mean_Cyanobacteria$difference_from_baseline <- mean_Cyanobacteria$mean_cyanobacteria - baseline_value
+
+mean_Cyanobacteria$treatment <- factor(mean_Cyanobacteria$treatment, levels = c("N_W", "N_B", "P_W", "P_B"))
+
+
+
+
+cyanobacteria_bar <- ggplot(mean_Cyanobacteria, aes(x = treatment, y = difference_from_baseline, fill = treatment)) +
+  geom_bar(stat = "identity", position = position_dodge(), width = 0.5, color = "black", size = 1) + # Using size for thicker outline
+  geom_errorbar(aes(ymin = difference_from_baseline - se, ymax = difference_from_baseline + se), width = 0.2, position = position_dodge(0.5)) + # Adjust error bars
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  labs(title = "Difference from Baseline (N_W) in Cyanobacteria Measurements",
+       x = "Treatment",
+       y = "Difference from Baseline") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_fill_manual(values = c("N_B" = "orange",
+                               "N_W" = "blue",
+                               "P_B" = "hotpink",
+                               "P_W" = "green"))
+
+
+cyanobacteria_bar
+
+
+```
+
+```{r}
+brighton$treatment <- with(brighton, paste0(Pad_Region, "_", Pad_Colour))
+
+GA_data <- brighton %>%
+  dplyr::select(treatment, Green_Algae)
+
+mean_Green_Algae <- GA_data %>%
+  group_by(treatment) %>%
+  summarise(mean_GA = mean(Green_Algae, na.rm = TRUE),
+            sd = sd(Green_Algae, na.rm = TRUE),
+            n = n()) %>%
+  mutate(se = sd / sqrt(n))
+
+# Assuming you want to find differences from a baseline treatment, set the baseline
+baseline_value <- mean_Green_Algae %>%
+  filter(treatment == "N_W") %>% # Replace YourBaselineTreatment with your actual baseline
+  pull(mean_GA)
+
+
+
+
+# Calculate differences from the baseline
+mean_Green_Algae$difference_from_baseline <- mean_Green_Algae$mean_GA - baseline_value
+
+mean_Green_Algae$treatment <- factor(mean_Green_Algae$treatment, levels = c("N_W", "N_B", "P_W", "P_B"))
+
+
+
+Green_Algae_bar <- ggplot(mean_Green_Algae, aes(x = treatment, y = difference_from_baseline, fill = treatment)) +
+  geom_bar(stat = "identity", position = position_dodge(), width = 0.5, color = "black", size = 1) + # Using size for thicker outline
+  geom_errorbar(aes(ymin = difference_from_baseline - se, ymax = difference_from_baseline + se), width = 0.2, position = position_dodge(0.5)) + # Adjust error bars
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  labs(title = "Difference from Baseline (N_W) in Green Algae Measurements",
+       x = "Treatment",
+       y = "Difference from Baseline") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_fill_manual(values = c("N_B" = "orange",
+                               "N_W" = "blue",
+                               "P_B" = "hotpink",
+                               "P_W" = "green"))
+
+
+Green_Algae_bar
+
+```
+
+```{r}
+# variation between treatment plots
+
+brighton$treatment <- with(brighton, paste0(Pad_Region, "_", Pad_Colour))
+
+BC_data <- brighton %>%
+  dplyr::select(treatment, Barnacle_Count)
+
+mean_BC <- BC_data %>%
+  group_by(treatment) %>%
+  summarise(mean_bc = mean(Barnacle_Count, na.rm = TRUE),
+            sd = sd(Barnacle_Count, na.rm = TRUE),
+            n = n(),
+            .groups = 'drop') %>% # This ensures the result is not grouped
+  mutate(se = sd / sqrt(n))
+
+
+# Assuming you want to find differences from a baseline treatment, set the baseline
+baseline_value <- mean_BC %>%
+  filter(treatment == "N_W") %>% # Replace YourBaselineTreatment with your actual baseline
+  pull(mean_bc)
+
+
+
+
+# Calculate differences from the baseline
+mean_BC$difference_from_baseline <- mean_BC$mean_bc - baseline_value
+
+mean_BC$treatment <- factor(mean_BC$treatment, levels = c("N_W", "N_B", "P_W", "P_B"))
+
+
+
+
+BC_bar <- ggplot(mean_BC, aes(x = treatment, y = difference_from_baseline, fill = treatment)) +
+  geom_bar(stat = "identity", position = position_dodge(), width = 0.5, color = "black", size = 1) + # Using size for thicker outline
+  geom_errorbar(aes(ymin = difference_from_baseline - se, ymax = difference_from_baseline + se), width = 0.2, position = position_dodge(0.5)) + # Adjust error bars
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  labs(title = "Difference from Baseline (N_W) in Barnacle Count Measurements",
+       x = "Treatment",
+       y = "Difference from Baseline") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_fill_manual(values = c("N_B" = "orange",
+                               "N_W" = "blue",
+                               "P_B" = "hotpink",
+                               "P_W" = "green"))
+
+BC_bar
+
+
+```
+
+```{r}
+brighton$treatment <- with(brighton, paste0(Pad_Region, "_", Pad_Colour))
+
+BS_data <- brighton %>%
+  dplyr::select(treatment, AVG_Banacle_Size)
+
+mean_BS <- BS_data %>%
+  group_by(treatment) %>%
+  summarise(mean_bs = mean(AVG_Banacle_Size, na.rm = TRUE),
+            sd = sd(AVG_Banacle_Size, na.rm = TRUE),
+            n = n(),
+            .groups = 'drop') %>% # This ensures the result is not grouped
+  mutate(se = sd / sqrt(n))
+
+
+# Assuming you want to find differences from a baseline treatment, set the baseline
+baseline_value <- mean_BS %>%
+  filter(treatment == "N_W") %>% # Replace YourBaselineTreatment with your actual baseline
+  pull(mean_bs)
+
+
+
+
+# Calculate differences from the baseline
+mean_BS$difference_from_baseline <- mean_BS$mean_bs - baseline_value
+
+mean_BS$treatment <- factor(mean_BS$treatment, levels = c("N_W", "N_B", "P_W", "P_B"))
+
+
+
+
+BS_bar <- ggplot(mean_BS, aes(x = treatment, y = difference_from_baseline, fill = treatment)) +
+  geom_bar(stat = "identity", position = position_dodge(), width = 0.5, color = "black", size = 1) + # Using size for thicker outline
+  geom_errorbar(aes(ymin = difference_from_baseline - se, ymax = difference_from_baseline + se), width = 0.2, position = position_dodge(0.5)) + # Adjust error bars
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  labs(title = "Difference from Baseline (N_W) in Barnacle Size Measurements",
+       x = "Treatment",
+       y = "Difference from Baseline") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_fill_manual(values = c("N_B" = "orange",
+                               "N_W" = "cornflowerblue",
+                               "P_B" = "brown2",
+                               "P_W" = "forestgreen"))
+
+BS_bar
+
+
+```
+
+```{r}
+brighton$treatment <- with(brighton, paste0(Pad_Region, "_", Pad_Colour))
+
+G_data <- brighton %>%
+  dplyr::select(treatment, total_grazer)
+
+mean_G <- G_data %>%
+  group_by(treatment) %>%
+  summarise(mean_g = mean(total_grazer, na.rm = TRUE),
+            sd = sd(total_grazer, na.rm = TRUE),
+            n = n(),
+            .groups = 'drop') %>% # This ensures the result is not grouped
+  mutate(se = sd / sqrt(n))
+
+
+# Assuming you want to find differences from a baseline treatment, set the baseline
+baseline_value <- mean_G %>%
+  filter(treatment == "N_W") %>% # Replace YourBaselineTreatment with your actual baseline
+  pull(mean_g)
+
+
+
+
+# Calculate differences from the baseline
+mean_G$difference_from_baseline <- mean_G$mean_g - baseline_value
+
+mean_G$treatment <- factor(mean_G$treatment, levels = c("N_W", "N_B", "P_W", "P_B"))
+
+
+
+
+G_bar <- ggplot(mean_G, aes(x = treatment, y = difference_from_baseline, fill = treatment)) +
+  geom_bar(stat = "identity", position = position_dodge(), width = 0.5, color = "black", size = 1) + # Using size for thicker outline
+  geom_errorbar(aes(ymin = difference_from_baseline - se, ymax = difference_from_baseline + se), width = 0.2, position = position_dodge(0.5)) + # Adjust error bars
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  labs(title = "Difference from Baseline (N_W) in Grazer Count Measurements",
+       x = "Treatment",
+       y = "Difference from Baseline") +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_fill_manual(values = c("N_B" = "orange",
+                               "N_W" = "cornflowerblue",
+                               "P_B" = "brown2",
+                               "P_W" = "forestgreen"))
+
+G_bar
+
 
 ```
 

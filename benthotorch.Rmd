@@ -1,0 +1,482 @@
+---
+title: "Benthotorch"
+output: html_document
+date: "2024-04-16"
+---
+
+
+
+```{r setup, include=FALSE}
+#### Clear  environment 
+rm(list = ls())         
+
+#### Required packages
+library(tidyverse) # for general organisation
+library(MASS) # for glm.nb
+library(pscl) # for odtest for dispersion
+library(lme4) # For linear mixed-effects models (if needed)
+library(lmerTest) # for mixed effect as lme4 doesn't give p values
+library(ncdf4) #for .nc data
+library(raster)
+library(AER) #for dispersion test for possion GLM
+library(forecast) # for ARIMA time series
+library(zoo) #create irregular time point series
+library(car)
+library(dplyr)
+library(tidyr)
+library(broom) # For tidy model summaries
+library(MANOVA.RM)
+library(vegan)
+library(kableExtra)
+knitr::opts_knit$set(root.dir ="C:/Users/katie/OneDrive/Documents/UNI/MBiol/Code_R/Katie_R")
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+
+```{r}
+brighton <- read.csv("Hotmess_R_1.csv")
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+#brighton$Sampling_Date <- as.Date(brighton$Sampling_Date, format = "%Y-%m-%d")
+
+brighton$Sampling_Date <- as.Date(brighton$Sampling_Date, format = "%d/%m/%Y")
+
+formatted_dates <- format(brighton$Sampling_Date, "%Y-%M-%d")
+
+
+brighton$Pad_Region <- as.factor(brighton$Pad_Region)
+
+brighton$Pad_Colour <- as.factor(brighton$Pad_Colour)
+
+brighton$total_grazer <- brighton$Gastropod_Count_ON + brighton$Gastropod_Count_SIDE
+
+str(brighton)
+```
+
+```{r}
+sub_JUN_1 <- dplyr::filter(brighton, Sampling_Date == as.Date('2023-06-20'))
+sub_JUL_1 <- dplyr::filter(brighton, Sampling_Date == as.Date('2023-07-06'))
+sub_JUL_2 <- dplyr::filter(brighton, Sampling_Date == as.Date('2023-07-20'))
+sub_AUG_1 <- dplyr::filter(brighton, Sampling_Date == as.Date('2023-08-01'))
+sub_AUG_2 <- dplyr::filter(brighton, Sampling_Date == as.Date('2023-08-17'))
+sub_SEP_1 <- dplyr::filter(brighton, Sampling_Date == as.Date('2023-09-01'))
+sub_SEP_2 <- dplyr::filter(brighton, Sampling_Date == as.Date('2023-09-15'))
+
+```
+
+#Diatoms
+```{r}
+
+jun_1_DIA <- lm(Diatoms ~ Pad_Colour*Pad_Region, data = sub_JUN_1)
+
+plot(jun_1_DIA)
+
+boxcox(jun_1_DIA)
+
+#lambda = 0.5 so do sqrt transform
+
+jun_1_DIA_sqrt <- lm(sqrt(Diatoms) ~ Pad_Colour*Pad_Region, data = sub_JUN_1)
+
+plot(jun_1_DIA_sqrt)
+
+summary(jun_1_DIA_sqrt)
+Anova(jun_1_DIA_sqrt)
+```
+
+```{r}
+jul_1_DIA <- lm(Diatoms ~ Pad_Colour*Pad_Region, data = sub_JUL_1)
+
+plot(jul_1_DIA)
+
+boxcox(jul_1_DIA)
+
+#lambda near to 0 so do log transform
+
+jul_1_DIA_log <- lm(log(Diatoms) ~ Pad_Colour*Pad_Region, data = sub_JUL_1)
+
+plot(jul_1_DIA_log)
+
+summary(jul_1_DIA_log)
+Anova(jul_1_DIA_log)
+```
+
+```{r}
+jul_2_DIA <- lm(Diatoms ~ Pad_Colour*Pad_Region, data = sub_JUL_2)
+
+
+plot(jul_2_DIA)
+
+
+boxcox(jul_2_DIA)
+
+#lambda near to 0 so do log transform
+
+
+jul_2_DIA_log <- lm(log(Diatoms) ~ Pad_Colour*Pad_Region, data = sub_JUL_2)
+
+plot(jul_2_DIA_log)
+
+summary(jul_2_DIA_log)
+Anova(jul_2_DIA_log)
+```
+
+```{r}
+aug_1_DIA <- lm(Diatoms ~ Pad_Colour*Pad_Region, data = sub_AUG_1)
+
+plot(aug_1_DIA)
+
+#boxcox(aug_1_DIA)
+
+summary(aug_1_DIA)
+Anova(aug_1_DIA)
+```
+
+```{r}
+# diatoms
+aug_2_DIA <- lm(Diatoms ~ Pad_Colour*Pad_Region, data = sub_AUG_2)
+
+
+# Filter out rows where a specific column is zero
+NO_0_sub_AUG_2 <- sub_AUG_2 %>% 
+  filter(Diatoms != 0)
+
+no_0_aug_2_DIA <- lm(Diatoms ~ Pad_Colour*Pad_Region, data = NO_0_sub_AUG_2)
+
+plot(no_0_aug_2_DIA)
+
+NO_0_sub_AUG_2$Diatoms <- as.numeric(NO_0_sub_AUG_2$Diatoms)
+
+
+# Run the boxcox transformation on the model created with non-zero, positive data
+boxcox(no_0_aug_2_DIA)
+
+
+#lambda near to 0 so do log transform
+
+
+AUG_2_DIA_log <- lm(log(Diatoms) ~ Pad_Colour*Pad_Region, data = NO_0_sub_AUG_2)
+
+plot(AUG_2_DIA_log)
+
+Anova(AUG_2_DIA_log)
+```
+
+```{r}
+# diatoms
+sep_1_DIA <- lm(Diatoms ~ Pad_Colour*Pad_Region, data = sub_SEP_1)
+
+plot(sep_1_DIA)
+
+boxcox(sep_1_DIA)
+
+
+#lambda near to 0 so do log transform
+
+
+SEP_1_DIA_log <- lm(log(Diatoms) ~ Pad_Colour*Pad_Region, data = sub_SEP_1)
+
+plot(SEP_1_DIA_log)
+
+Anova(SEP_1_DIA_log)
+```
+
+```{r}
+# diatoms
+sep_2_DIA <- lm(Diatoms ~ Pad_Colour*Pad_Region, data = sub_SEP_2)
+
+plot(sep_2_DIA)
+
+boxcox(sep_2_DIA)
+
+
+#lambda near to 0 so do log transform
+
+
+SEP_2_DIA_log <- lm(log(Diatoms) ~ Pad_Colour*Pad_Region, data = sub_SEP_2)
+
+plot(SEP_2_DIA_log)
+
+Anova(SEP_2_DIA_log)
+```
+
+
+#Cyanobacteria
+
+```{r}
+
+jun_1_CYA <- lm(Cyanobacteria ~ Pad_Colour*Pad_Region, data = sub_JUN_1)
+
+plot(jun_1_CYA)
+
+Anova(jun_1_CYA)
+```
+
+```{r}
+jul_1_CYA <- lm(Cyanobacteria ~ Pad_Colour*Pad_Region, data = sub_JUL_1)
+
+plot(jul_1_CYA)
+
+positive_data_JUL_1 <- sub_JUL_1 %>% 
+  filter(Cyanobacteria > 0)
+
+jul_1_CYA_positive <- lm(Cyanobacteria ~ Pad_Colour*Pad_Region,, data = positive_data_JUL_1)
+
+boxcox(jul_1_CYA_positive)
+
+#lambda near to 0 so do log transform
+
+jul_1_CYA_log <- lm(log(Cyanobacteria) ~ Pad_Colour*Pad_Region, data = positive_data_JUL_1)
+
+plot(jul_1_CYA_log)
+
+Anova(jul_1_CYA_log)
+```
+
+```{r}
+jul_2_CYA <- lm(Cyanobacteria ~ Pad_Colour*Pad_Region, data = sub_JUL_2)
+
+
+plot(jul_2_CYA)
+
+boxcox(jul_2_CYA)
+
+#lambda near to 0 so do log transform
+
+
+jul_2_CYA_log <- lm(log(Cyanobacteria) ~ Pad_Colour*Pad_Region, data = sub_JUL_2)
+
+plot(jul_2_CYA_log)
+
+Anova(jul_2_CYA_log)
+```
+
+```{r}
+aug_1_CYA <- lm(Cyanobacteria ~ Pad_Colour*Pad_Region, data = sub_AUG_1)
+
+plot(aug_1_CYA)
+
+boxcox(aug_1_CYA)
+
+aug_1_CYA_log <- lm(log(Cyanobacteria) ~ Pad_Colour*Pad_Region, data = sub_AUG_1)
+
+plot(aug_1_CYA_log)
+Anova(aug_1_CYA)
+```
+
+```{r}
+# Cyanobacteria
+aug_2_CYA <- lm(Cyanobacteria ~ Pad_Colour*Pad_Region, data = sub_AUG_2)
+
+plot(aug_2_CYA)
+
+# Filter out rows where a specific column is zero
+NO_0_sub_AUG_2_CYA <- sub_AUG_2 %>% 
+  filter(Cyanobacteria != 0)
+
+no_0_aug_2_CYA <- lm(Diatoms ~ Pad_Colour*Pad_Region, data = NO_0_sub_AUG_2_CYA)
+
+plot(no_0_aug_2_CYA)
+
+NO_0_sub_AUG_2_CYA$Cyanobacteria <- as.numeric(NO_0_sub_AUG_2_CYA$Cyanobacteria)
+
+
+# Run the boxcox transformation on the model created with non-zero, positive data
+boxcox(no_0_aug_2_CYA)
+
+
+#lambda near to 0 so do log transform
+
+
+AUG_2_CYA_log <- lm(log(Cyanobacteria) ~ Pad_Colour*Pad_Region, data = NO_0_sub_AUG_2_CYA)
+
+plot(AUG_2_CYA_log)
+
+Anova(AUG_2_CYA_log)
+```
+
+```{r}
+# Cyanobacteria
+sep_1_CYA <- lm(Cyanobacteria ~ Pad_Colour*Pad_Region, data = sub_SEP_1)
+
+plot(sep_1_CYA)
+
+boxcox(sep_1_CYA)
+
+
+#lambda near to 0 so do log transform
+
+
+SEP_1_CYA_log <- lm(log(Cyanobacteria) ~ Pad_Colour*Pad_Region, data = sub_SEP_1)
+
+plot(SEP_1_CYA_log)
+
+Anova(SEP_1_CYA_log)
+```
+
+```{r}
+# Cyanobacteria
+sep_2_CYA <- lm(Cyanobacteria ~ Pad_Colour*Pad_Region, data = sub_SEP_2)
+
+plot(sep_2_CYA)
+
+boxcox(sep_2_CYA)
+
+
+#lambda near to 0 so do log transform
+
+
+SEP_2_CYA_log <- lm(log(Cyanobacteria) ~ Pad_Colour*Pad_Region, data = sub_SEP_2)
+
+plot(SEP_2_CYA_log)
+
+Anova(SEP_2_CYA_log)
+```
+
+
+
+#Green Algae
+
+#Diatoms
+```{r}
+
+jun_1_G <- lm(Green_Algae ~ Pad_Colour*Pad_Region, data = sub_JUN_1)
+
+plot(jun_1_G)
+
+Anova(jun_1_G)
+
+#? model_gamma <- glm(Green_Algae ~ Time + as.factor(Category), family = Gamma(link = "log"), data = data)
+#summary(model_gamma)
+
+
+```
+
+```{r}
+
+library(gamlss)
+
+jul_1_G <- lm(Green_Algae ~ Pad_Colour*Pad_Region, data = sub_JUL_1)
+
+summary(jul_1_G)
+Anova(jul_1_G)
+
+brighton$Green_Algae <- as.numeric(brighton$Green_Algae)
+# Fit zero-inflated beta model
+zib_model <- gamlss(Green_Algae ~ Pad_Colour * Pad_Region,
+                    family = BEZI(), data = sub_JUL_1)
+
+summary(zib_model)
+```
+
+```{r}
+jul_2_DIA <- lm(Green_Algae ~ Pad_Colour*Pad_Region, data = sub_JUL_2)
+
+
+plot(jul_2_DIA)
+
+
+boxcox(jul_2_DIA)
+
+#lambda near to 0 so do log transform
+
+
+jul_2_DIA_log <- lm(log(Diatoms) ~ Pad_Colour*Pad_Region, data = sub_JUL_2)
+
+plot(jul_2_DIA_log)
+
+summary(jul_2_DIA_log)
+Anova(jul_2_DIA_log)
+```
+
+```{r}
+aug_1_DIA <- lm(Green_Algae ~ Pad_Colour*Pad_Region, data = sub_AUG_1)
+
+plot(aug_1_DIA)
+
+#boxcox(aug_1_DIA)
+
+summary(aug_1_DIA)
+Anova(aug_1_DIA)
+```
+
+```{r}
+# diatoms
+aug_2_DIA <- lm(Green_Algae ~ Pad_Colour*Pad_Region, data = sub_AUG_2)
+
+
+# Filter out rows where a specific column is zero
+NO_0_sub_AUG_2 <- sub_AUG_2 %>% 
+  filter(Diatoms != 0)
+
+no_0_aug_2_DIA <- lm(Diatoms ~ Pad_Colour*Pad_Region, data = NO_0_sub_AUG_2)
+
+plot(no_0_aug_2_DIA)
+
+NO_0_sub_AUG_2$Diatoms <- as.numeric(NO_0_sub_AUG_2$Diatoms)
+
+
+# Run the boxcox transformation on the model created with non-zero, positive data
+boxcox(no_0_aug_2_DIA)
+
+
+#lambda near to 0 so do log transform
+
+
+AUG_2_DIA_log <- lm(log(Diatoms) ~ Pad_Colour*Pad_Region, data = NO_0_sub_AUG_2)
+
+plot(AUG_2_DIA_log)
+
+Anova(AUG_2_DIA_log)
+```
+
+```{r}
+# diatoms
+sep_1_DIA <- lm(Green_Algae ~ Pad_Colour*Pad_Region, data = sub_SEP_1)
+
+plot(sep_1_DIA)
+
+boxcox(sep_1_DIA)
+
+
+#lambda near to 0 so do log transform
+
+
+SEP_1_DIA_log <- lm(log(Diatoms) ~ Pad_Colour*Pad_Region, data = sub_SEP_1)
+
+plot(SEP_1_DIA_log)
+
+Anova(SEP_1_DIA_log)
+```
+
+```{r}
+# diatoms
+sep_2_DIA <- lm(Green_Algae ~ Pad_Colour*Pad_Region, data = sub_SEP_2)
+
+plot(sep_2_DIA)
+
+boxcox(sep_2_DIA)
+
+
+#lambda near to 0 so do log transform
+
+
+SEP_2_DIA_log <- lm(log(Diatoms) ~ Pad_Colour*Pad_Region, data = sub_SEP_2)
+
+plot(SEP_2_DIA_log)
+
+Anova(SEP_2_DIA_log)
+```
+
+
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
